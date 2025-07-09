@@ -1,0 +1,15 @@
+.
+├── .venv                        # Python仮想環境 venv (Dockerの仮想環境を使わない場合に使用)
+├── .devcontainer
+│   ├── devcontainer.json       # DevContainerの設定ファイル
+│   ├── docker-compose.yml      # Docker Composeファイル
+│   └── python
+│       ├── Dockerfile          # PythonコンテナイナのDockerfile
+│       └── requirements.txt    # パッケージファイル
+├── .gitignore                   # Gitで無視するファイル
+├── .vscode
+│   └── settings.json           # Dcoker仮想環境上でVSCodeに追加する設定
+├── data                         # データ類の格納フォルダ
+│   └── oil.csv
+├── README.md
+└── start_jupyter.sh             # Jupyter Labを起動するシェルスクリプト
