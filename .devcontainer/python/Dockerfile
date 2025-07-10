@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     fonts-ipaexfont \
     libopencv-dev \
     lhasa \
+    wget \
     fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
