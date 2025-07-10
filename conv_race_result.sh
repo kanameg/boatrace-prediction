@@ -51,7 +51,7 @@ fi
 # データのコード変換
 # ----------------------------------
 # 変換成功したら、元のファイルを削除
-iconv -f sjis -t utf8 k${YEAR}${MONTH}${DAY}.txt > k${YEAR}${MONTH}${DAY}_utf8.txt
+iconv -f sjis -t utf8 k${YEAR}${MONTH}${DAY}.txt > k${YEAR}${MONTH}${DAY}_u8.txt
 if [ -f k${YEAR}${MONTH}${DAY}_utf8.txt ]; then
     rm -f k${YEAR}${MONTH}${DAY}.txt
 fi
