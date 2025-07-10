@@ -39,7 +39,7 @@ fi
 # ----------------------------------
 # 圧縮ファイルからのデータを展開
 # ----------------------------------
-ARCHIVE=data/raw/race_result/k${YEAR}${MONTH}${DAY}.lzh
+ARCHIVE=data/raw/archives/k${YEAR}${MONTH}${DAY}.lzh
 if [ -f ${ARCHIVE} ]; then
     lha x ${ARCHIVE} -o k${YEAR}${MONTH}${DAY}.txt
 else
@@ -51,7 +51,7 @@ fi
 # データのコード変換
 # ----------------------------------
 # 変換成功したら、元のファイルを削除
-iconv -f sjis -t utf8 k${YEAR}${MONTH}${DAY}.txt > k${YEAR}${MONTH}${DAY}_u8.txt
-if [ -f k${YEAR}${MONTH}${DAY}_utf8.txt ]; then
+iconv -f sjis -t utf8 k${YEAR}${MONTH}${DAY}.txt > data/raw/results/k${YEAR}${MONTH}${DAY}_u8.txt
+if [ -f data/raw/results/k${YEAR}${MONTH}${DAY}_u8.txt ]; then
     rm -f k${YEAR}${MONTH}${DAY}.txt
 fi
