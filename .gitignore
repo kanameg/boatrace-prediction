@@ -2,3 +2,4 @@
 .ipynb_checkpoints/
 .coverage
 .venv
+__pycache__/
