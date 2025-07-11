@@ -113,34 +113,181 @@ class ProgramConverter:
             return match.group(1)
         return ""
 
-    def parse_boat_data(self, line: str) -> Optional[Dict]:
-        """艇の情報を解析"""
-        # 基本的な艇情報のパターン（100%や特殊ケースに対応）
-        # 1 3501川上昇平54長崎55B1 4.92 25.30 5.38 33.85 50 30.22 12 36.62              8
-        # 3 5128坪井爽佑27三重57B1 3.07 16.22 3.38 17.32 16  0.00 51100.00 611         12
-        pattern = r"^(\d)\s+(\d+)([^\d]+?)(\d{2})([^\d]+?)(\d{2})([AB]\d)\s+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)\s+(\d+)\s+([0-9.]+)\s+(\d+)\s*([0-9.]+)"
+    def parse_player_info(self, player_info: str) -> Dict[str, str]:
+        """選手情報から各フィールドを固定長で抽出"""
+        # 例: "3319山崎義明57埼玉52A2" から各要素を抽出
 
-        match = re.match(pattern, line)
-        if not match:
-            return None
+        # 選手登番（最初の4桁）
+        player_id = player_info[:4]
+        remaining = player_info[4:]
+
+        # 級別（最後の2桁、例: A2, B1）
+        class_part = remaining[-2:]
+        remaining = remaining[:-2]
+
+        # 体重（最後の2桁の数字）
+        weight = remaining[-2:]
+        remaining = remaining[:-2]
+
+        # 支部名（可変長、残りの最後の部分）
+        # 年齢の前の部分を支部とする
+        age = remaining[-2:]  # 年齢（最後の2桁）
+        branch = remaining[:-2]  # 支部（年齢より前の残り）
+
+        # 選手名（登番の後、支部より前）
+        name_end = len(remaining) - len(branch)
+        player_name = remaining[:name_end]
 
         return {
-            "boat_number": match.group(1),
-            "player_id": match.group(2),
-            "player_name": match.group(3).strip(),
-            "age": match.group(4),
-            "branch": match.group(5).strip(),
-            "weight": match.group(6),
-            "class": match.group(7),
-            "national_win_rate": match.group(8),
-            "national_2nd_rate": match.group(9),
-            "local_win_rate": match.group(10),
-            "local_2nd_rate": match.group(11),
-            "motor_number": match.group(12),
-            "motor_2nd_rate": match.group(13),
-            "boat_number_actual": match.group(14),
-            "boat_2nd_rate": match.group(15),
+            "player_id": player_id,
+            "player_name": player_name,
+            "age": age,
+            "branch": branch,
+            "weight": weight,
+            "class": class_part,
         }
+
+    def parse_boat_data(self, line: str) -> Optional[Dict]:
+        """艇の情報を固定長解析で処理"""
+        # スペースで分割
+        parts = line.strip().split()
+
+        # 最低限必要な要素数をチェック
+        if len(parts) < 8:
+            return None
+
+        try:
+            # 基本構造:
+            # [艇番] [選手情報] [全国勝率] [数値部分...] [その他...]
+
+            boat_number = parts[0]
+            player_info = parts[1]
+
+            # 選手情報を解析
+            player_data = self.parse_player_info(player_info)
+
+            # 全国勝率は確実に分離されている
+            national_win_rate = parts[2]
+
+            # 残りの数値部分を解析（100.00の連結を考慮）
+            numeric_parts = parts[3:]
+
+            # 100.00連結パターンを解析して分離
+            separated_values = self.separate_combined_values(numeric_parts)
+
+            # 分離された値を適切な変数に割り当て
+            if len(separated_values) >= 7:
+                national_2nd_rate = separated_values[0]
+                local_win_rate = separated_values[1]
+                local_2nd_rate = separated_values[2]
+                motor_number = separated_values[3]
+                motor_2nd_rate = separated_values[4]
+                boat_number_actual = separated_values[5]
+                boat_2nd_rate = separated_values[6]
+            else:
+                # データが不足している場合のフォールバック
+                return None
+
+            return {
+                "boat_number": boat_number,
+                "player_id": player_data["player_id"],
+                "player_name": player_data["player_name"],
+                "age": player_data["age"],
+                "branch": player_data["branch"],
+                "weight": player_data["weight"],
+                "class": player_data["class"],
+                "national_win_rate": national_win_rate,
+                "national_2nd_rate": national_2nd_rate,
+                "local_win_rate": local_win_rate,
+                "local_2nd_rate": local_2nd_rate,
+                "motor_number": motor_number,
+                "motor_2nd_rate": motor_2nd_rate,
+                "boat_number_actual": boat_number_actual,
+                "boat_2nd_rate": boat_2nd_rate,
+            }
+
+        except (IndexError, ValueError) as e:
+            return None
+
+    def separate_combined_values(self, numeric_parts: list) -> list:
+        """100.00連結を考慮して数値を分離"""
+        result = []
+
+        for part in numeric_parts:
+            # 100.00が含まれているかチェック
+            if "100.00" in part:
+                separated = self.split_with_100(part)
+                result.extend(separated)
+            else:
+                # 通常の数値として追加
+                result.append(part)
+
+        return result
+
+    def split_with_100(self, combined: str) -> list:
+        """100.00を含む連結文字列を分離"""
+        parts = []
+
+        # 100.00の位置を特定
+        idx_100 = combined.find("100.00")
+
+        if idx_100 == 0:
+            # 先頭が100.00の場合
+            parts.append("100.00")
+            remaining = combined[6:]
+            if remaining:
+                # 残りもチェック
+                parts.extend(self.split_remaining(remaining))
+        elif idx_100 > 0:
+            # 中間または末尾に100.00がある場合
+            before = combined[:idx_100]
+            parts.extend(self.split_remaining(before))
+            parts.append("100.00")
+
+            after = combined[idx_100 + 6 :]
+            if after:
+                parts.extend(self.split_remaining(after))
+
+        return parts
+
+    def split_remaining(self, text: str) -> list:
+        """残りのテキストをX.XX形式で分離"""
+        if not text:
+            return []
+
+        parts = []
+        i = 0
+        while i < len(text):
+            # X.XX形式を探す（Xは1桁以上の数字）
+            if i + 2 < len(text) and text[i + 2] == ".":
+                # XX.XX形式
+                if i + 4 < len(text):
+                    parts.append(text[i : i + 5])
+                    i += 5
+                else:
+                    parts.append(text[i:])
+                    break
+            elif i + 1 < len(text) and text[i + 1] == ".":
+                # X.XX形式
+                if i + 3 < len(text):
+                    parts.append(text[i : i + 4])
+                    i += 4
+                else:
+                    parts.append(text[i:])
+                    break
+            else:
+                # 数字のみ（モーター番号やボート番号）
+                # 次のドットまたは文字列の終わりまで
+                j = i
+                while j < len(text) and text[j].isdigit():
+                    j += 1
+                if j > i:
+                    parts.append(text[i:j])
+                    i = j
+                else:
+                    i += 1
+
+        return parts
 
     def parse_race_header(self, line: str) -> Optional[Tuple[str, str, str, str]]:
         """レースヘッダー情報を解析"""
