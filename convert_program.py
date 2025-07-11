@@ -115,28 +115,33 @@ class ProgramConverter:
 
     def parse_player_info(self, player_info: str) -> Dict[str, str]:
         """選手情報から各フィールドを固定長で抽出"""
-        # 例: "3319山崎義明57埼玉52A2" から各要素を抽出
+        # 例: "4089妹尾忠幸43岡山55A1" から各要素を抽出
 
         # 選手登番（最初の4桁）
         player_id = player_info[:4]
-        remaining = player_info[4:]
 
         # 級別（最後の2桁、例: A2, B1）
-        class_part = remaining[-2:]
-        remaining = remaining[:-2]
+        class_part = player_info[-2:]
 
-        # 体重（最後の2桁の数字）
-        weight = remaining[-2:]
-        remaining = remaining[:-2]
+        # 体重（最後から3-4文字目の2桁）
+        weight = player_info[-4:-2]
 
-        # 支部名（可変長、残りの最後の部分）
-        # 年齢の前の部分を支部とする
-        age = remaining[-2:]  # 年齢（最後の2桁）
-        branch = remaining[:-2]  # 支部（年齢より前の残り）
+        # 中間部分（名前+年齢+支部）
+        middle = player_info[4:-4]
 
-        # 選手名（登番の後、支部より前）
-        name_end = len(remaining) - len(branch)
-        player_name = remaining[:name_end]
+        # 年齢（数字2桁）とその後の支部を正規表現で抽出
+        import re
+
+        age_match = re.search(r"(\d{2})([^0-9]+)$", middle)
+        if age_match:
+            age = age_match.group(1)
+            branch = age_match.group(2)
+            player_name = middle[: age_match.start()]
+        else:
+            # フォールバック：最後の2文字を年齢として扱う
+            age = middle[-2:] if middle and middle[-2:].isdigit() else ""
+            branch = ""
+            player_name = middle[:-2] if len(middle) > 2 else middle
 
         return {
             "player_id": player_id,
@@ -148,54 +153,61 @@ class ProgramConverter:
         }
 
     def parse_boat_data(self, line: str) -> Optional[Dict]:
-        """艇の情報を固定長解析で処理"""
-        # スペースで分割
-        parts = line.strip().split()
+        """艇の情報を固定位置で直接抽出"""
+        # 行の長さをチェック（最低限ボート2連率まで取得できる長さ）
+        if len(line) < 58:
+            return None
 
-        # 最低限必要な要素数をチェック
-        if len(parts) < 8:
+        # 区切り線やヘッダー行を除外
+        line_stripped = line.strip()
+        if (
+            line_stripped.startswith("-")
+            or "選手" in line_stripped
+            or "登番" in line_stripped
+            or "番号" in line_stripped
+        ):
             return None
 
         try:
-            # 基本構造:
-            # [艇番] [選手情報] [全国勝率] [数値部分...] [その他...]
+            # 艇番（最初の1文字）
+            boat_number = line[0:1].strip()
 
-            boat_number = parts[0]
-            player_info = parts[1]
-
-            # 選手情報を解析
-            player_data = self.parse_player_info(player_info)
-
-            # 全国勝率は確実に分離されている
-            national_win_rate = parts[2]
-
-            # 残りの数値部分を解析（100.00の連結を考慮）
-            numeric_parts = parts[3:]
-
-            # 100.00連結パターンを解析して分離
-            separated_values = self.separate_combined_values(numeric_parts)
-
-            # 分離された値を適切な変数に割り当て
-            if len(separated_values) >= 7:
-                national_2nd_rate = separated_values[0]
-                local_win_rate = separated_values[1]
-                local_2nd_rate = separated_values[2]
-                motor_number = separated_values[3]
-                motor_2nd_rate = separated_values[4]
-                boat_number_actual = separated_values[5]
-                boat_2nd_rate = separated_values[6]
-            else:
-                # データが不足している場合のフォールバック
+            # 艇番が数字でない場合は無効
+            if not boat_number.isdigit():
                 return None
+
+            # 選手情報を固定位置で直接抽出
+            player_id = line[2:6].strip()  # 選手登番
+            player_name = line[6:10].strip()  # 選手名
+            age = line[10:12].strip()  # 年齢
+            branch = line[12:14].strip()  # 支部
+            weight = line[14:16].strip()  # 体重
+            player_class = line[16:18].strip()  # 級別
+
+            # 選手登番が4桁の数字でない場合は無効
+            if not (player_id.isdigit() and len(player_id) == 4):
+                return None
+
+            # 固定位置での数値抽出（実際のデータ構造に基づいて）
+            national_win_rate = line[19:23].strip()  # 6.55 位置
+            national_2nd_rate = line[24:29].strip()  # 44.60 位置
+            local_win_rate = line[30:34].strip()  # 6.76 位置
+            local_2nd_rate = line[35:40].strip()  # 52.38 位置
+            motor_number = line[41:43].strip()  # 45 位置
+            motor_2nd_rate = line[44:49].strip()  # 41.06 位置（モーター2連率）
+            boat_number_actual = line[50:52].strip()  # 38 位置
+            boat_2nd_rate = (
+                line[53:58].strip() if len(line) >= 58 else ""
+            )  # 47.98 位置（ボート2連率）
 
             return {
                 "boat_number": boat_number,
-                "player_id": player_data["player_id"],
-                "player_name": player_data["player_name"],
-                "age": player_data["age"],
-                "branch": player_data["branch"],
-                "weight": player_data["weight"],
-                "class": player_data["class"],
+                "player_id": player_id,
+                "player_name": player_name,
+                "age": age,
+                "branch": branch,
+                "weight": weight,
+                "class": player_class,
                 "national_win_rate": national_win_rate,
                 "national_2nd_rate": national_2nd_rate,
                 "local_win_rate": local_win_rate,
@@ -208,86 +220,6 @@ class ProgramConverter:
 
         except (IndexError, ValueError) as e:
             return None
-
-    def separate_combined_values(self, numeric_parts: list) -> list:
-        """100.00連結を考慮して数値を分離"""
-        result = []
-
-        for part in numeric_parts:
-            # 100.00が含まれているかチェック
-            if "100.00" in part:
-                separated = self.split_with_100(part)
-                result.extend(separated)
-            else:
-                # 通常の数値として追加
-                result.append(part)
-
-        return result
-
-    def split_with_100(self, combined: str) -> list:
-        """100.00を含む連結文字列を分離"""
-        parts = []
-
-        # 100.00の位置を特定
-        idx_100 = combined.find("100.00")
-
-        if idx_100 == 0:
-            # 先頭が100.00の場合
-            parts.append("100.00")
-            remaining = combined[6:]
-            if remaining:
-                # 残りもチェック
-                parts.extend(self.split_remaining(remaining))
-        elif idx_100 > 0:
-            # 中間または末尾に100.00がある場合
-            before = combined[:idx_100]
-            parts.extend(self.split_remaining(before))
-            parts.append("100.00")
-
-            after = combined[idx_100 + 6 :]
-            if after:
-                parts.extend(self.split_remaining(after))
-
-        return parts
-
-    def split_remaining(self, text: str) -> list:
-        """残りのテキストをX.XX形式で分離"""
-        if not text:
-            return []
-
-        parts = []
-        i = 0
-        while i < len(text):
-            # X.XX形式を探す（Xは1桁以上の数字）
-            if i + 2 < len(text) and text[i + 2] == ".":
-                # XX.XX形式
-                if i + 4 < len(text):
-                    parts.append(text[i : i + 5])
-                    i += 5
-                else:
-                    parts.append(text[i:])
-                    break
-            elif i + 1 < len(text) and text[i + 1] == ".":
-                # X.XX形式
-                if i + 3 < len(text):
-                    parts.append(text[i : i + 4])
-                    i += 4
-                else:
-                    parts.append(text[i:])
-                    break
-            else:
-                # 数字のみ（モーター番号やボート番号）
-                # 次のドットまたは文字列の終わりまで
-                j = i
-                while j < len(text) and text[j].isdigit():
-                    j += 1
-                if j > i:
-                    parts.append(text[i:j])
-                    i = j
-                else:
-                    i += 1
-
-        return parts
 
     def parse_race_header(self, line: str) -> Optional[Tuple[str, str, str, str]]:
         """レースヘッダー情報を解析"""
