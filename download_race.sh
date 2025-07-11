@@ -78,7 +78,6 @@ else
 fi
 
 # ディレクトリ作成
-mkdir -p data/raw/archives
 mkdir -p "$OUTPUT_DIR"
 
 # ファイル名とURL生成
@@ -87,7 +86,7 @@ RESULT_FILENAME="${PREFIX}${YEAR_SHORT}${MONTH_PADDED}${DAY_PADDED}.txt"
 UTF8_FILENAME="${PREFIX}${YEAR_SHORT}${MONTH_PADDED}${DAY_PADDED}_u8.txt"
 
 DOWNLOAD_URL="https://www1.mbrace.or.jp/od2/${URL_PATH}/${YEAR_FULL}${MONTH_PADDED}/${ARCHIVE_FILENAME}"
-ARCHIVE_PATH="data/raw/archives/${ARCHIVE_FILENAME}"
+ARCHIVE_PATH="${ARCHIVE_FILENAME}"  # カレントディレクトリに一時保存
 RESULT_PATH="${OUTPUT_DIR}/${UTF8_FILENAME}"
 
 echo "処理開始: ${YEAR_FULL}年${MONTH}月${DAY}日の${TYPE_NAME}データを処理します"
@@ -100,7 +99,8 @@ if [ -f "$RESULT_PATH" ]; then
     exit 0
 fi
 
-# ダウンロード処理
+# ダウンロード処理（wgetコマンドを使用して、指定されたURLからlzh形式の圧縮ファイルをダウンロード）
+# ダウンロードしたファイルは、カレントディレクトリに一時的に保存される（後ほど削除）
 echo "ダウンロード中: ${ARCHIVE_FILENAME}"
 if ! wget -q --show-progress -O "$ARCHIVE_PATH" "$DOWNLOAD_URL"; then
     error_exit "ダウンロードに失敗しました: $DOWNLOAD_URL"
@@ -108,7 +108,7 @@ fi
 
 echo "ダウンロード完了: $ARCHIVE_PATH"
 
-# 解凍処理
+# 解凍処理（lhaコマンドを使用して解凍。解凍後、ファイルはカレントディレクトリに一時保存）
 echo "解凍中: ${ARCHIVE_FILENAME}"
 if ! lha x "$ARCHIVE_PATH" > /dev/null 2>&1; then
     error_exit "解凍に失敗しました: $ARCHIVE_PATH"
@@ -121,7 +121,15 @@ fi
 
 echo "解凍完了: $RESULT_FILENAME"
 
+# 正常に解凍された場合、元のアーカイブファイルは削除
+if [ -f "$ARCHIVE_PATH" ]; then
+    rm "$ARCHIVE_PATH"
+    echo "アーカイブファイルを削除しました: $ARCHIVE_PATH"
+fi
+
 # 文字コード変換（Shift-JIS → UTF-8）
+# 解凍されたファイルはShift-JISエンコーディングで保存されているため、iconvコマンドを使用してUTF-8に変換
+# 変換後のファイルは番組表と競走結果でそれぞれ指定のディレクトリに保存
 echo "文字コード変換中: Shift-JIS → UTF-8"
 if ! iconv -f SHIFT_JIS -t UTF-8 "$RESULT_FILENAME" > "$RESULT_PATH"; then
     error_exit "文字コード変換に失敗しました: $RESULT_FILENAME"
@@ -129,10 +137,10 @@ fi
 
 echo "文字コード変換完了: $RESULT_PATH"
 
-# 一時ファイルの削除
+# 一時ファイルの削除（正常に変換された場合、元のShift-JISファイルは削除）
 if [ -f "$RESULT_FILENAME" ]; then
     rm "$RESULT_FILENAME"
-    echo "一時ファイルを削除しました: $RESULT_FILENAME"
+    echo "Shift-JISファイルを削除しました: $RESULT_FILENAME"
 fi
 
 echo "処理完了: ${YEAR_FULL}年${MONTH}月${DAY}日の${TYPE_NAME}データ処理が正常に完了しました"

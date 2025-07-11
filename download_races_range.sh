@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 #
 # 範囲指定ダウンロードスクリプト
-# 指定された期間の競争成績または番組表データを一括ダウンロードする
+# このスクリプトは、指定された期間の競争成績と番組表を一括でダウンロードします。
+# 期間は開始日と終了日で指定します。
+# ダウンロードには、download_race.shスクリプトを使用します。
 #
 # 使用方法: ./download_races_range.sh [p|r] START_YYYY START_MM START_DD END_YYYY END_MM END_DD
 #
@@ -135,6 +137,7 @@ ERROR_COUNT=0
 CURRENT_DAY=1
 
 # 各日付に対してダウンロード処理を実行
+# ダウンロードは、サーバーに負荷をかけないように、1日ごとに行い、ダウンロードの間隔は1秒とする
 CURRENT_EPOCH=$START_EPOCH
 while [ "$CURRENT_EPOCH" -le "$END_EPOCH" ]; do
     # エポック秒を年月日に変換
