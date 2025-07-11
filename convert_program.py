@@ -345,7 +345,7 @@ class ProgramConverter:
 def main():
     """メイン関数"""
     if len(sys.argv) != 4:
-        print("使用方法: python convert_race_program.py YYYY MM DD")
+        print("使用方法: python convert_program.py YYYY MM DD")
         print("  YYYY: 年4桁（例: 2025）")
         print("  MM: 1桁または2桁の月（例: 7）")
         print("  DD: 1桁または2桁の日（例: 9）")

@@ -4,7 +4,7 @@
 # 範囲指定番組表データ変換スクリプト
 # 指定された期間の番組表データを一括で変換します。
 # 期間は開始日と終了日で指定します。
-# 期間内の各日の番組表データをconvert_race_program.pyスクリプトを使用して変換します。
+# 期間内の各日の番組表データをconvert_program.pyスクリプトを使用して変換します。
 #
 # 使用方法: ./convert_programs_range.sh START_YYYY START_MM START_DD END_YYYY END_MM END_DD
 #
@@ -73,9 +73,9 @@ epoch_to_date() {
     date -d "@${epoch}" "+%Y %m %d"
 }
 
-# convert_race_program.pyの存在確認
-if [ ! -f "./convert_race_program.py" ]; then
-    error_exit "convert_race_program.py が見つかりません。同じディレクトリに配置してください。"
+# convert_program.pyの存在確認
+if [ ! -f "./convert_program.py" ]; then
+    error_exit "convert_program.py が見つかりません。同じディレクトリに配置してください。"
 fi
 
 # 引数チェック
@@ -127,8 +127,8 @@ while [ "$CURRENT_EPOCH" -le "$END_EPOCH" ]; do
     
     echo "[${CURRENT_DAY}/${TOTAL_DAYS}] ${YEAR}年${MONTH}月${DAY}日の処理中..."
     
-    # convert_race_program.pyを実行
-    if python3 convert_race_program.py "$YEAR" "$MONTH" "$DAY"; then
+    # convert_program.pyを実行
+    if python3 convert_program.py "$YEAR" "$MONTH" "$DAY"; then
         echo "  → 成功"
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
     else
