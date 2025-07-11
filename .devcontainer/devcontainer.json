@@ -28,6 +28,7 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
+				"mechatroner.rainbow-csv", // Rainbow CSV extension for better CSV handling
 				"ms-python.python",  // Python extension
 				"ms-python.black-formatter",  // Black Python formatter
 				"ms-python.isort",  // iSort Python formatter
