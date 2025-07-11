@@ -99,59 +99,6 @@ class ProgramConverter:
             return f"{hour}:{minute}"
         return ""
 
-    def parse_distance(self, distance_str: str) -> str:
-        """距離を解析してメートル数を抽出"""
-        # 全角数字を半角に変換
-        distance_str = distance_str.translate(
-            str.maketrans("０１２３４５６７８９", "0123456789")
-        )
-
-        # 数字のみを抽出
-        pattern = r"(\d+)"
-        match = re.search(pattern, distance_str)
-        if match:
-            return match.group(1)
-        return ""
-
-    def parse_player_info(self, player_info: str) -> Dict[str, str]:
-        """選手情報から各フィールドを固定長で抽出"""
-        # 例: "4089妹尾忠幸43岡山55A1" から各要素を抽出
-
-        # 選手登番（最初の4桁）
-        player_id = player_info[:4]
-
-        # 級別（最後の2桁、例: A2, B1）
-        class_part = player_info[-2:]
-
-        # 体重（最後から3-4文字目の2桁）
-        weight = player_info[-4:-2]
-
-        # 中間部分（名前+年齢+支部）
-        middle = player_info[4:-4]
-
-        # 年齢（数字2桁）とその後の支部を正規表現で抽出
-        import re
-
-        age_match = re.search(r"(\d{2})([^0-9]+)$", middle)
-        if age_match:
-            age = age_match.group(1)
-            branch = age_match.group(2)
-            player_name = middle[: age_match.start()]
-        else:
-            # フォールバック：最後の2文字を年齢として扱う
-            age = middle[-2:] if middle and middle[-2:].isdigit() else ""
-            branch = ""
-            player_name = middle[:-2] if len(middle) > 2 else middle
-
-        return {
-            "player_id": player_id,
-            "player_name": player_name,
-            "age": age,
-            "branch": branch,
-            "weight": weight,
-            "class": class_part,
-        }
-
     def parse_boat_data(self, line: str) -> Optional[Dict]:
         """艇の情報を固定位置で直接抽出"""
         # 行の長さをチェック（最低限ボート2連率まで取得できる長さ）
@@ -188,17 +135,15 @@ class ProgramConverter:
             if not (player_id.isdigit() and len(player_id) == 4):
                 return None
 
-            # 固定位置での数値抽出（実際のデータ構造に基づいて）
-            national_win_rate = line[19:23].strip()  # 6.55 位置
-            national_2nd_rate = line[24:29].strip()  # 44.60 位置
-            local_win_rate = line[30:34].strip()  # 6.76 位置
-            local_2nd_rate = line[35:40].strip()  # 52.38 位置
-            motor_number = line[41:43].strip()  # 45 位置
-            motor_2nd_rate = line[44:49].strip()  # 41.06 位置（モーター2連率）
-            boat_number_actual = line[50:52].strip()  # 38 位置
-            boat_2nd_rate = (
-                line[53:58].strip() if len(line) >= 58 else ""
-            )  # 47.98 位置（ボート2連率）
+            # 固定位置での数値抽出
+            national_win_rate = line[19:23].strip()
+            national_2nd_rate = line[24:29].strip()
+            local_win_rate = line[30:34].strip()
+            local_2nd_rate = line[35:40].strip()
+            motor_number = line[41:43].strip()
+            motor_2nd_rate = line[44:49].strip()
+            boat_number_actual = line[50:52].strip()
+            boat_2nd_rate = line[53:58].strip() if len(line) >= 58 else ""
 
             return {
                 "boat_number": boat_number,
@@ -218,16 +163,11 @@ class ProgramConverter:
                 "boat_2nd_rate": boat_2nd_rate,
             }
 
-        except (IndexError, ValueError) as e:
+        except (IndexError, ValueError):
             return None
 
     def parse_race_header(self, line: str) -> Optional[Tuple[str, str, str, str]]:
         """レースヘッダー情報を解析"""
-        # レース番号、レース名、距離、投票締切時間を抽出
-        # 　１Ｒ  予選　　　　          Ｈ１８００ｍ  電話投票締切予定１７：４１
-        # 　５Ｒ  ５ールドレー          Ｈ１２００ｍ  電話投票締切予定１２：２８
-        # １２Ｒ  ツッキー選抜          Ｈ１２００ｍ  電話投票締切予定１６：１５
-
         # 全角数字を半角に変換
         converted_line = line.translate(
             str.maketrans("０１２３４５６７８９Ｒ", "0123456789R")
@@ -250,16 +190,13 @@ class ProgramConverter:
 
         # 距離を抽出（H1800m形式）
         distance_match = re.search(r"[HＨ](\d+)[mｍ]", converted_line)
-        if distance_match:
-            distance = distance_match.group(1)
-        else:
-            distance = ""
+        distance = distance_match.group(1) if distance_match else ""
 
         # 投票締切時間を抽出
         time = self.parse_time(line)
 
-        # レース名を抽出（簡易版）
-        race_name = "予選"  # デフォルト
+        # レース名はデフォルト値
+        race_name = "予選"
 
         return race_number, race_name, distance, time
 
@@ -278,7 +215,7 @@ class ProgramConverter:
             if line.startswith("BEND") or line.startswith("FINALB"):
                 break
 
-            # レースヘッダーの解析（Ｒまたは R を含む行で、全角半角両対応）
+            # レースヘッダーの解析
             if ("Ｒ" in line or "R" in line) and "電話投票締切予定" in line:
                 race_info = self.parse_race_header(line)
                 if race_info:
@@ -346,7 +283,7 @@ class ProgramConverter:
                     i += 1
                     continue
 
-                # レースヘッダーの検出（全角半角Rに対応し、より広範囲にマッチ）
+                # レースヘッダーの検出
                 if (
                     ("Ｒ" in line or "R" in line)
                     and "電話投票締切予定" in line
