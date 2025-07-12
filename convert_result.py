@@ -117,30 +117,31 @@ class ResultConverter:
 
         i = start_idx
         while i < len(lines):
-            line = lines[i].strip()
+            line = lines[i]  # 元の行を保持（先頭の空白も含めて）
+            line_stripped = line.strip()  # 処理用にstrip版も用意
 
             # 次のレースの開始で終了
-            if re.search(r"^\s+\d+R\s+", line) and i > start_idx:
+            if re.search(r"^\s*\d+R\s+", line) and i > start_idx:
                 break
 
             # 空行をスキップ
-            if not line:
+            if not line_stripped:
                 i += 1
                 continue
 
             # 各賭け式の解析
-            if "単勝" in line:
+            if "単勝" in line_stripped:
                 # 単勝     1          130
-                match = re.search(r"単勝\s+(\d+)\s+(\d+)", line)
+                match = re.search(r"単勝\s+(\d+)\s+(\d+)", line_stripped)
                 if match:
                     betting_results["単勝"] = {
                         "艇番": match.group(1),
                         "払戻金": match.group(2),
                     }
 
-            elif "複勝" in line:
+            elif "複勝" in line_stripped:
                 # 複勝     1          140  3          290
-                boat_payouts = re.findall(r"(\d+)\s+(\d+)", line)
+                boat_payouts = re.findall(r"(\d+)\s+(\d+)", line_stripped)
                 if boat_payouts:
                     betting_results["複勝1着"] = {
                         "艇番": boat_payouts[0][0],
@@ -152,9 +153,11 @@ class ResultConverter:
                             "払戻金": boat_payouts[1][1],
                         }
 
-            elif "２連単" in line:
+            elif "２連単" in line_stripped:
                 # ２連単   1-3        390  人気     1
-                match = re.search(r"２連単\s+(\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line)
+                match = re.search(
+                    r"２連単\s+(\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line_stripped
+                )
                 if match:
                     betting_results["2連単"] = {
                         "艇番": match.group(1),
@@ -162,9 +165,11 @@ class ResultConverter:
                         "人気": match.group(3),
                     }
 
-            elif "２連複" in line:
+            elif "２連複" in line_stripped:
                 # ２連複   1-3        310  人気     1
-                match = re.search(r"２連複\s+(\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line)
+                match = re.search(
+                    r"２連複\s+(\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line_stripped
+                )
                 if match:
                     betting_results["2連複"] = {
                         "艇番": match.group(1),
@@ -172,9 +177,11 @@ class ResultConverter:
                         "人気": match.group(3),
                     }
 
-            elif "拡連複" in line:
+            elif "拡連複" in line_stripped:
                 # 拡連複   1-3        190  人気     1
-                match = re.search(r"拡連複\s+(\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line)
+                match = re.search(
+                    r"拡連複\s+(\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line_stripped
+                )
                 if match:
                     if "拡連複1" not in betting_results:
                         betting_results["拡連複1"] = {
@@ -196,15 +203,15 @@ class ResultConverter:
                         }
 
             elif (
-                line.strip()
-                and not line.startswith("単勝")
-                and not line.startswith("複勝")
-                and not line.startswith("２連")
-                and not line.startswith("拡連複")
-                and not line.startswith("３連")
+                line_stripped
+                and not line_stripped.startswith("単勝")
+                and not line_stripped.startswith("複勝")
+                and not line_stripped.startswith("２連")
+                and not line_stripped.startswith("拡連複")
+                and not line_stripped.startswith("３連")
             ):
                 # 拡連複の続き行の処理
-                match = re.search(r"(\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line)
+                match = re.search(r"(\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line_stripped)
                 if match:
                     if "拡連複2" not in betting_results:
                         betting_results["拡連複2"] = {
@@ -219,10 +226,10 @@ class ResultConverter:
                             "人気": match.group(3),
                         }
 
-            elif "３連単" in line:
+            elif "３連単" in line_stripped:
                 # ３連単   1-3-6     1830  人気     5
                 match = re.search(
-                    r"３連単\s+(\d+-\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line
+                    r"３連単\s+(\d+-\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line_stripped
                 )
                 if match:
                     betting_results["3連単"] = {
@@ -231,10 +238,10 @@ class ResultConverter:
                         "人気": match.group(3),
                     }
 
-            elif "３連複" in line:
+            elif "３連複" in line_stripped:
                 # ３連複   1-3-6      760  人気     3
                 match = re.search(
-                    r"３連複\s+(\d+-\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line
+                    r"３連複\s+(\d+-\d+-\d+)\s+(\d+)\s+人気\s+(\d+)", line_stripped
                 )
                 if match:
                     betting_results["3連複"] = {
@@ -557,8 +564,8 @@ class ResultConverter:
                     key = f"{key}_{result_data['boat_number']}"
                 race_results[key] = result_data
 
-            # 払戻金情報の解析（単勝から始まる部分）
-            if "単勝" in line and not betting_results:
+            # 払戻金情報の解析（そのレースの着順データが終わった後）
+            if "単勝" in line and race_results and not betting_results:
                 betting_results = self.parse_betting_results_in_race(lines, i)
 
             i += 1
