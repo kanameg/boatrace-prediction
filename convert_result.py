@@ -475,8 +475,13 @@ class ResultConverter:
 
             # スタートタイミング（位置を調整）
             start_timing = ""
-            if len(line) > 43:
-                start_timing = line[43:47].strip()
+            if len(line) > 42:
+                # フライングの場合は位置42から、通常の場合は位置43からスタートタイミングを取得
+                if finish_pos == "F":
+                    start_timing = line[42:48].strip()
+                else:
+                    start_timing = line[43:49].strip()
+
                 # フライングの場合は F0.08 -> -0.08 に変換
                 if start_timing.startswith("F"):
                     start_timing = "-" + start_timing[1:]
@@ -484,7 +489,12 @@ class ResultConverter:
             # レースタイム（位置を調整）
             race_time = ""
             if len(line) > 52:
-                race_time = line[52:59].strip()
+                # フライングの場合は位置53から、通常の場合は位置52からレースタイムを取得
+                if finish_pos == "F":
+                    race_time = line[53:58].strip()
+                else:
+                    race_time = line[52:58].strip()
+
                 # ".  ."の場合は空文字にする
                 if race_time == ".  .":
                     race_time = ""
