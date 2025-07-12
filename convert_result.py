@@ -413,9 +413,24 @@ class ResultConverter:
         try:
             # 着順（位置2-4の2桁）
             finish_pos = line[2:4].strip()
-            
+
             # 着順の妥当性チェック（数字または失格コード）
-            valid_finish_codes = ["01", "02", "03", "04", "05", "06", "F", "S0", "S1", "S2", "L0", "L1", "K0", "K1"]
+            valid_finish_codes = [
+                "01",
+                "02",
+                "03",
+                "04",
+                "05",
+                "06",
+                "F",
+                "S0",
+                "S1",
+                "S2",
+                "L0",
+                "L1",
+                "K0",
+                "K1",
+            ]
             if finish_pos not in valid_finish_codes:
                 return None
 
@@ -424,12 +439,12 @@ class ResultConverter:
                 # フライングの場合: "  F   4 5155..." - 艇番は位置6
                 boat_number = line[6:7].strip()
             elif finish_pos in ["S0", "S1", "S2"]:
-                # スタート事故の場合: "  S1  1 4287..." - 艇番は位置6  
+                # スタート事故の場合: "  S1  1 4287..." - 艇番は位置6
                 boat_number = line[6:7].strip()
             else:
                 # 通常の着順の場合: "  01  1 3501..." - 艇番は位置6
                 boat_number = line[6:7].strip()
-                
+
             if not boat_number.isdigit():
                 return None
 
@@ -719,36 +734,40 @@ class ResultConverter:
 
                     # 6艇分のレース結果を追加（艇番順）
                     finish_order = ["01", "02", "03", "04", "05", "06"]
-                    
+
                     # 全ての結果を収集
                     all_race_results = []
-                    
+
                     # 着順者を収集
                     for finish_pos in finish_order:
                         if finish_pos in race["race_results"]:
                             result = race["race_results"][finish_pos]
                             all_race_results.append(result)
-                    
+
                     # 失格者を収集（キーに艇番が含まれている）
                     for key, result in race["race_results"].items():
                         if "_" in key:  # 失格者のキー（例: "F_4", "S1_5"）
                             all_race_results.append(result)
-                    
+
                     # 艇番順でソート
                     all_race_results.sort(key=lambda x: int(x.get("boat_number", "0")))
-                    
+
                     # 6艇まで分の結果を出力（不足分は空で埋める）
                     for i in range(6):
                         if i < len(all_race_results):
                             result = all_race_results[i]
                         else:
                             result = {}
-                        
+
                         # 着順の先頭0を除去（01→1, 02→2, ...）
                         finish_pos = result.get("finish_position", "")
-                        if finish_pos and finish_pos.isdigit() and finish_pos.startswith("0"):
+                        if (
+                            finish_pos
+                            and finish_pos.isdigit()
+                            and finish_pos.startswith("0")
+                        ):
                             finish_pos = finish_pos[1:]
-                        
+
                         row.extend(
                             [
                                 finish_pos,
