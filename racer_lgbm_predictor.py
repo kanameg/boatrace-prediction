@@ -233,7 +233,7 @@ def evaluate_model(model, X_test, y_test):
     print("=== モデル評価結果 ===")
     print(json.dumps(results, indent=2))
 
-    return results
+    return results, y_pred
 
 
 def save_model(model, file_path="model/lightgbm_model.pkl"):
@@ -282,8 +282,31 @@ def save_predictions(test_data, predictions, output_file="predict_results.csv"):
     # テストデータのコピーを作成
     result_df = test_data.copy()
 
-    # 予測結果を最終列に追加
+    # 予測結果を追加
     result_df["予測勝敗"] = predictions
+
+    # 勝敗列が存在する場合は整数型に変換（欠損値がある場合は除外）
+    if "勝敗" in result_df.columns:
+        # 勝敗列に欠損値がない場合のみ整数型に変換
+        if not result_df["勝敗"].isna().any():
+            result_df["勝敗"] = result_df["勝敗"].astype(int)
+
+    # 列の順序を調整（予測勝敗を最初、勝敗を2番目に）
+    columns = list(result_df.columns)
+
+    # 予測勝敗と勝敗を除いた他の列
+    other_columns = [col for col in columns if col not in ["予測勝敗", "勝敗"]]
+
+    # 新しい列順序を決定
+    if "勝敗" in columns:
+        # 勝敗列がある場合：予測勝敗、勝敗、その他の列
+        new_columns_order = ["予測勝敗", "勝敗"] + other_columns
+    else:
+        # 勝敗列がない場合：予測勝敗、その他の列
+        new_columns_order = ["予測勝敗"] + other_columns
+
+    # 列順序を適用
+    result_df = result_df[new_columns_order]
 
     # CSVファイルに保存
     result_df.to_csv(output_file, index=False, encoding="utf-8")
@@ -304,6 +327,54 @@ def save_predictions(test_data, predictions, output_file="predict_results.csv"):
             f"{result_df['年'].max()}/{result_df['月'].max()}/{result_df['日'].max()}"
         )
         print(f"予測対象期間: {min_date} ～ {max_date}")
+
+
+def save_evaluation_results(
+    eval_data, predictions, output_file="evaluation_results.csv"
+):
+    """評価結果を保存する"""
+    print(f"評価結果を保存中: {output_file}")
+
+    # 評価データのコピーを作成
+    result_df = eval_data.copy()
+
+    # 予測結果を追加
+    result_df["予測勝敗"] = predictions
+
+    # 勝敗を整数型に変換
+    result_df["勝敗"] = result_df["勝敗"].astype(int)
+
+    # 列の順序を調整（予測勝敗を最初、勝敗を2番目に）
+    columns = list(result_df.columns)
+
+    # 予測勝敗と勝敗を除いた他の列
+    other_columns = [col for col in columns if col not in ["予測勝敗", "勝敗"]]
+
+    # 新しい列順序：予測勝敗、勝敗、その他の列
+    new_columns_order = ["予測勝敗", "勝敗"] + other_columns
+
+    # 列順序を適用
+    result_df = result_df[new_columns_order]
+
+    # CSVファイルに保存
+    result_df.to_csv(output_file, index=False, encoding="utf-8")
+
+    print(f"評価結果を保存しました: {output_file}")
+
+    # 評価結果の概要を表示
+    win_predictions = sum(predictions)
+    total_predictions = len(predictions)
+    print(f"評価概要: 勝ち予測 {win_predictions}件 / 全体 {total_predictions}件")
+
+    # 日付範囲を表示（日付情報がある場合）
+    if all(col in result_df.columns for col in ["年", "月", "日"]):
+        min_date = (
+            f"{result_df['年'].min()}/{result_df['月'].min()}/{result_df['日'].min()}"
+        )
+        max_date = (
+            f"{result_df['年'].max()}/{result_df['月'].max()}/{result_df['日'].max()}"
+        )
+        print(f"評価対象期間: {min_date} ～ {max_date}")
 
 
 def run_train_mode(args):
@@ -397,7 +468,10 @@ def run_train_mode(args):
     model = train_model(X_train, y_train, feature_names)
 
     # モデルの評価
-    evaluate_model(model, X_test, y_test)
+    results, y_pred = evaluate_model(model, X_test, y_test)
+
+    # 評価結果を保存
+    save_evaluation_results(eval_data, y_pred)
 
     # モデルの保存
     save_model(model)
