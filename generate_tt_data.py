@@ -7,6 +7,7 @@
 """
 
 import argparse
+import json
 import os
 import sys
 from datetime import datetime
@@ -45,6 +46,25 @@ def parse_arguments():
         args.end_day = args.start_day
 
     return args
+
+
+def load_config(config_file="config/features.json"):
+    """設定ファイルを読み込む"""
+    try:
+        print(f"設定ファイルを読み込んでいます: {config_file}")
+        with open(config_file, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        print("設定ファイル読み込み完了")
+        return config
+    except FileNotFoundError:
+        print(f"エラー: 設定ファイル '{config_file}' が見つかりません")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"エラー: 設定ファイルの形式が正しくありません - {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"エラー: 設定ファイルの読み込みに失敗しました - {e}")
+        sys.exit(1)
 
 
 def validate_date(year, month, day):
@@ -116,31 +136,20 @@ def filter_by_race_track(df, race_track):
         return df
 
 
-def extract_features(df):
+def extract_features(df, config):
     """必要な特徴量を抽出する"""
     print("選手情報の特徴量を抽出中...")
 
+    # 設定ファイルから特徴量と必要な列を取得
+    feature_columns = config.get("features", [])
+    required_columns = config.get("required_columns", [])
+
     # 仕様書で指定された列を抽出（日付情報を含める）
-    # 注意: '性別'はデータに含まれていないため除外
-    required_columns = [
-        "年",  # 日付情報
-        "月",  # 日付情報
-        "日",  # 日付情報
-        "枠番",
-        "選手登番",
-        "年齢",
-        "体重",
-        "級別",
-        "全国勝率",
-        "モーター2連率",
-        "ボート2連率",
-        "着順",  # 予測対象
-        "勝敗",  # 予測対象（バイナリ）
-    ]
+    all_required_columns = required_columns + feature_columns
 
     # 利用可能な列のみを選択
-    available_columns = [col for col in required_columns if col in df.columns]
-    missing_columns = [col for col in required_columns if col not in df.columns]
+    available_columns = [col for col in all_required_columns if col in df.columns]
+    missing_columns = [col for col in all_required_columns if col not in df.columns]
 
     if missing_columns:
         print(f"警告: 以下の列がデータに含まれていません: {missing_columns}")
@@ -148,20 +157,16 @@ def extract_features(df):
     feature_df = df[available_columns].copy()
 
     # データ型の確認と変換
-    numeric_columns = [
-        "年齢",
-        "体重",
-        "全国勝率",
-        "モーター2連率",
-        "ボート2連率",
-        "着順",
-    ]
+    numeric_columns = config.get("numeric_columns", [])
     for col in numeric_columns:
         if col in feature_df.columns:
             feature_df[col] = pd.to_numeric(feature_df[col], errors="coerce")
 
     print(f"特徴量抽出完了: {len(feature_df)}行、{len(feature_df.columns)}列")
     print(f"抽出された列: {list(feature_df.columns)}")
+    print(
+        f"使用された特徴量: {[col for col in feature_columns if col in feature_df.columns]}"
+    )
 
     return feature_df
 
@@ -211,6 +216,9 @@ def main():
     """メイン処理"""
     print("競艇学習データ作成プログラム開始")
 
+    # 設定ファイルの読み込み
+    config = load_config()
+
     # コマンドライン引数の解析
     args = parse_arguments()
 
@@ -246,7 +254,7 @@ def main():
         sys.exit(1)
 
     # 特徴量の抽出
-    feature_df = extract_features(df)
+    feature_df = extract_features(df, config)
 
     # データの概要を表示
     print_data_summary(feature_df, args.mode)
