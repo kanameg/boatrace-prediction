@@ -243,7 +243,7 @@ def extract_fixed_position_data(line):
     return [
         # 基本情報
         format_number(touban),
-        remove_fullwidth_spaces(name_kanji),
+        convert_fullwidth_spaces_in_name(name_kanji),
         convert_halfwidth_kana_to_fullwidth(name_kana),
         shibu,
         kyu,
@@ -539,6 +539,22 @@ def write_csv(results, output_file):
         # データを書き込み
         for row in results:
             writer.writerow(row)
+
+
+def convert_fullwidth_spaces_in_name(text):
+    """名前漢字の全角スペース変換（1文字削除、2文字以上は半角スペースに変換）"""
+    if not text:
+        return ""
+    
+    import re
+    
+    # 2文字以上の連続する全角スペースを半角スペースに変換
+    text = re.sub('　{2,}', ' ', text)
+    
+    # 1文字の全角スペースを削除
+    text = text.replace('　', '')
+    
+    return text
 
 
 def remove_fullwidth_spaces(text):
