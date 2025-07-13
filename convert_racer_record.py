@@ -8,39 +8,40 @@
 
 import csv
 import os
+import re
 import sys
 import unicodedata
-import re
 
 
 def get_char_width(char):
     """文字幅を取得（SHIFT-JISベース：全角文字は2、半角文字は1）"""
     code = ord(char)
-    
+
     # ASCII文字（0x00-0x7F）: 1バイト
     if code <= 0x7F:
         return 1
-    
+
     # 半角カタカナ（0xFF61-0xFF9F）: 1バイト
     if 0xFF61 <= code <= 0xFF9F:
         return 1
-    
+
     # その他のUnicode文字（漢字、ひらがな、全角カタカナなど）: 2バイト
     return 2
+
 
 def extract_substring_by_width(text, start_pos, length):
     """文字幅を考慮した部分文字列の抽出"""
     current_pos = 0
     start_char_index = 0
     end_char_index = 0
-    
+
     # 開始位置を見つける
     for i, char in enumerate(text):
         if current_pos >= start_pos:
             start_char_index = i
             break
         current_pos += get_char_width(char)
-    
+
     # 終了位置を見つける
     for i, char in enumerate(text[start_char_index:], start_char_index):
         if current_pos >= start_pos + length:
@@ -49,14 +50,15 @@ def extract_substring_by_width(text, start_pos, length):
         current_pos += get_char_width(char)
     else:
         end_char_index = len(text)
-    
+
     return text[start_char_index:end_char_index].strip()
+
 
 def extract_fixed_position_data(line):
     """固定位置からデータを抽出（SHIFT-JIS文字幅ベース）"""
     if len(line) < 200:  # 最小限の長さチェック
         return None
-    
+
     try:
         # 基本情報（文字幅位置ベース）
         touban = extract_substring_by_width(line, 0, 4)
@@ -71,7 +73,7 @@ def extract_fixed_position_data(line):
         height = extract_substring_by_width(line, 51, 3)
         weight = extract_substring_by_width(line, 54, 2)
         blood_type = extract_substring_by_width(line, 56, 2)
-        
+
         # 成績データ
         shoritsu = extract_substring_by_width(line, 58, 4)
         fukusho_ritsu = extract_substring_by_width(line, 62, 4)
@@ -81,44 +83,44 @@ def extract_fixed_position_data(line):
         yuushutsu_kaisuu = extract_substring_by_width(line, 75, 2)
         yuushou_kaisuu = extract_substring_by_width(line, 77, 2)
         heikin_start_timing = extract_substring_by_width(line, 79, 3)
-        
+
         # コース別統計
         # 1コース
         course1_shinnyuu = extract_substring_by_width(line, 82, 3)
         course1_fukusho = extract_substring_by_width(line, 85, 4)
         course1_heikin_start = extract_substring_by_width(line, 89, 3)
         course1_heikin_junii = extract_substring_by_width(line, 92, 3)
-        
+
         # 2コース
         course2_shinnyuu = extract_substring_by_width(line, 95, 3)
         course2_fukusho = extract_substring_by_width(line, 98, 4)
         course2_heikin_start = extract_substring_by_width(line, 102, 3)
         course2_heikin_junii = extract_substring_by_width(line, 105, 3)
-        
+
         # 3コース
         course3_shinnyuu = extract_substring_by_width(line, 108, 3)
         course3_fukusho = extract_substring_by_width(line, 111, 4)
         course3_heikin_start = extract_substring_by_width(line, 115, 3)
         course3_heikin_junii = extract_substring_by_width(line, 118, 3)
-        
+
         # 4コース
         course4_shinnyuu = extract_substring_by_width(line, 121, 3)
         course4_fukusho = extract_substring_by_width(line, 124, 4)
         course4_heikin_start = extract_substring_by_width(line, 128, 3)
         course4_heikin_junii = extract_substring_by_width(line, 131, 3)
-        
+
         # 5コース
         course5_shinnyuu = extract_substring_by_width(line, 134, 3)
         course5_fukusho = extract_substring_by_width(line, 137, 4)
         course5_heikin_start = extract_substring_by_width(line, 141, 3)
         course5_heikin_junii = extract_substring_by_width(line, 144, 3)
-        
+
         # 6コース
         course6_shinnyuu = extract_substring_by_width(line, 147, 3)
         course6_fukusho = extract_substring_by_width(line, 150, 4)
         course6_heikin_start = extract_substring_by_width(line, 154, 3)
         course6_heikin_junii = extract_substring_by_width(line, 157, 3)
-        
+
         # 級・期間情報
         zenki_kyu = extract_substring_by_width(line, 160, 2)
         zenzenki_kyu = extract_substring_by_width(line, 162, 2)
@@ -130,7 +132,7 @@ def extract_fixed_position_data(line):
         sanshutu_kikan_ji = extract_substring_by_width(line, 179, 8)
         sanshutu_kikan_shi = extract_substring_by_width(line, 187, 8)
         yousei_ki = extract_substring_by_width(line, 195, 3)
-        
+
         # 詳細成績データ（1コース）
         course1_1chaku = extract_substring_by_width(line, 198, 3)
         course1_2chaku = extract_substring_by_width(line, 201, 3)
@@ -146,7 +148,7 @@ def extract_fixed_position_data(line):
         course1_s0 = extract_substring_by_width(line, 226, 2)
         course1_s1 = extract_substring_by_width(line, 228, 2)
         course1_s2 = extract_substring_by_width(line, 230, 2)
-        
+
         # 詳細成績データ（2コース）
         course2_1chaku = extract_substring_by_width(line, 232, 3)
         course2_2chaku = extract_substring_by_width(line, 235, 3)
@@ -162,7 +164,7 @@ def extract_fixed_position_data(line):
         course2_s0 = extract_substring_by_width(line, 260, 2)
         course2_s1 = extract_substring_by_width(line, 262, 2)
         course2_s2 = extract_substring_by_width(line, 264, 2)
-        
+
         # 詳細成績データ（3コース）
         course3_1chaku = extract_substring_by_width(line, 266, 3)
         course3_2chaku = extract_substring_by_width(line, 269, 3)
@@ -178,7 +180,7 @@ def extract_fixed_position_data(line):
         course3_s0 = extract_substring_by_width(line, 294, 2)
         course3_s1 = extract_substring_by_width(line, 296, 2)
         course3_s2 = extract_substring_by_width(line, 298, 2)
-        
+
         # 詳細成績データ（4コース）
         course4_1chaku = extract_substring_by_width(line, 300, 3)
         course4_2chaku = extract_substring_by_width(line, 303, 3)
@@ -194,7 +196,7 @@ def extract_fixed_position_data(line):
         course4_s0 = extract_substring_by_width(line, 328, 2)
         course4_s1 = extract_substring_by_width(line, 330, 2)
         course4_s2 = extract_substring_by_width(line, 332, 2)
-        
+
         # 詳細成績データ（5コース）
         course5_1chaku = extract_substring_by_width(line, 334, 3)
         course5_2chaku = extract_substring_by_width(line, 337, 3)
@@ -210,7 +212,7 @@ def extract_fixed_position_data(line):
         course5_s0 = extract_substring_by_width(line, 362, 2)
         course5_s1 = extract_substring_by_width(line, 364, 2)
         course5_s2 = extract_substring_by_width(line, 366, 2)
-        
+
         # 詳細成績データ（6コース）
         course6_1chaku = extract_substring_by_width(line, 368, 3)
         course6_2chaku = extract_substring_by_width(line, 371, 3)
@@ -226,22 +228,22 @@ def extract_fixed_position_data(line):
         course6_s0 = extract_substring_by_width(line, 396, 2)
         course6_s1 = extract_substring_by_width(line, 398, 2)
         course6_s2 = extract_substring_by_width(line, 400, 2)
-        
+
         # コースなし・出身地（最終部分）
         course_nashi_l0 = extract_substring_by_width(line, 402, 2)
         course_nashi_l1 = extract_substring_by_width(line, 404, 2)
         course_nashi_k0 = extract_substring_by_width(line, 406, 2)
         course_nashi_k1 = extract_substring_by_width(line, 408, 2)
-        
+
         # 出身地（最後の部分）
         # 出身地は全角文字（2バイト）なので文字幅ベースで抽出
         # コースなしK1回数の後（410文字幅位置）から出身地を抽出
         shusshinchi = extract_substring_by_width(line, 410, 6)
-    
+
     except (IndexError, ValueError) as e:
         print(f"抽出エラー: {e}")
         return None
-    
+
     return [
         # 基本情報
         format_number(touban),
@@ -256,7 +258,6 @@ def extract_fixed_position_data(line):
         format_number(height),
         format_number(weight),
         blood_type,
-        
         # 成績データ
         format_decimal(shoritsu, 2),  # 小数点以下2桁
         format_decimal(fukusho_ritsu, 1),  # 小数点以下1桁
@@ -266,7 +267,6 @@ def extract_fixed_position_data(line):
         format_number(yuushutsu_kaisuu),
         format_number(yuushou_kaisuu),
         format_decimal(heikin_start_timing, 2),  # 小数点以下2桁
-        
         # コース別統計
         format_number(course1_shinnyuu),
         format_decimal(course1_fukusho, 1),
@@ -292,7 +292,6 @@ def extract_fixed_position_data(line):
         format_decimal(course6_fukusho, 1),
         format_decimal(course6_heikin_start, 2),
         format_decimal(course6_heikin_junii, 2),
-        
         # 級・期間情報
         zenki_kyu,
         zenzenki_kyu,
@@ -304,7 +303,6 @@ def extract_fixed_position_data(line):
         format_date_yyyymmdd(sanshutu_kikan_ji),
         format_date_yyyymmdd(sanshutu_kikan_shi),
         format_number(yousei_ki),
-        
         # 詳細成績データ（1コース）
         format_number(course1_1chaku),
         format_number(course1_2chaku),
@@ -320,7 +318,6 @@ def extract_fixed_position_data(line):
         format_number(course1_s0),
         format_number(course1_s1),
         format_number(course1_s2),
-        
         # 詳細成績データ（2コース）
         format_number(course2_1chaku),
         format_number(course2_2chaku),
@@ -336,7 +333,6 @@ def extract_fixed_position_data(line):
         format_number(course2_s0),
         format_number(course2_s1),
         format_number(course2_s2),
-        
         # 詳細成績データ（3コース）
         format_number(course3_1chaku),
         format_number(course3_2chaku),
@@ -352,7 +348,6 @@ def extract_fixed_position_data(line):
         format_number(course3_s0),
         format_number(course3_s1),
         format_number(course3_s2),
-        
         # 詳細成績データ（4コース）
         format_number(course4_1chaku),
         format_number(course4_2chaku),
@@ -368,7 +363,6 @@ def extract_fixed_position_data(line):
         format_number(course4_s0),
         format_number(course4_s1),
         format_number(course4_s2),
-        
         # 詳細成績データ（5コース）
         format_number(course5_1chaku),
         format_number(course5_2chaku),
@@ -384,7 +378,6 @@ def extract_fixed_position_data(line):
         format_number(course5_s0),
         format_number(course5_s1),
         format_number(course5_s2),
-        
         # 詳細成績データ（6コース）
         format_number(course6_1chaku),
         format_number(course6_2chaku),
@@ -400,13 +393,12 @@ def extract_fixed_position_data(line):
         format_number(course6_s0),
         format_number(course6_s1),
         format_number(course6_s2),
-        
         # その他
         format_number(course_nashi_l0),
         format_number(course_nashi_l1),
         format_number(course_nashi_k0),
         format_number(course_nashi_k1),
-        remove_fullwidth_spaces(shusshinchi)
+        remove_fullwidth_spaces(shusshinchi),
     ]
 
 
@@ -426,7 +418,7 @@ def format_decimal(value, decimal_places):
         return ""
     try:
         num = int(value)
-        divisor = 10 ** decimal_places
+        divisor = 10**decimal_places
         return str(num / divisor)
     except ValueError:
         return value
@@ -456,7 +448,7 @@ def format_date(date_str, nengou):
     """生年月日フォーマット（年号付き）"""
     if not date_str or len(date_str) != 6:
         return date_str
-    
+
     try:
         year = date_str[:2]
         month = date_str[2:4]
@@ -471,7 +463,7 @@ def format_date_yyyymmdd(date_str):
     """YYYYMMDD形式の日付フォーマット"""
     if not date_str or len(date_str) != 8:
         return date_str
-    
+
     try:
         year = date_str[:4]
         month = date_str[4:6]
@@ -484,11 +476,11 @@ def format_date_yyyymmdd(date_str):
 def parse_racer_data(file_path):
     """レーサー期別成績ファイルを解析してCSVデータを作成"""
     results = []
-    
+
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             for line_num, line in enumerate(f, 1):
-                line = line.rstrip('\n\r')
+                line = line.rstrip("\n\r")
                 if line.strip():  # 空行でない場合
                     racer_data = extract_fixed_position_data(line)
                     if racer_data:
@@ -501,43 +493,164 @@ def parse_racer_data(file_path):
     except Exception as e:
         print(f"エラー: ファイル読み込み中にエラーが発生しました: {e}")
         return []
-    
+
     return results
 
 
 def write_csv(results, output_file):
     """結果をCSVファイルに出力"""
     headers = [
-        "登番", "名前漢字", "名前カナ", "支部", "級", "年号", "生年月日", "性別", "年齢", "身長", "体重", "血液型",
-        "勝率", "複勝率", "1着回数", "2着回数", "出走回数", "優出回数", "優勝回数", "平均スタートタイミング",
-        "1コース進入回数", "1コース複勝率", "1コース平均スタートタイミング", "1コース平均スタート順位",
-        "2コース進入回数", "2コース複勝率", "2コース平均スタートタイミング", "2コース平均スタート順位",
-        "3コース進入回数", "3コース複勝率", "3コース平均スタートタイミング", "3コース平均スタート順位",
-        "4コース進入回数", "4コース複勝率", "4コース平均スタートタイミング", "4コース平均スタート順位",
-        "5コース進入回数", "5コース複勝率", "5コース平均スタートタイミング", "5コース平均スタート順位",
-        "6コース進入回数", "6コース複勝率", "6コース平均スタートタイミング", "6コース平均スタート順位",
-        "前期級", "前々期級", "前々々期級", "前期能力指数", "今期能力指数", "年", "期", "算出期間自", "算出期間至", "養成期",
-        "1コース1着回数", "1コース2着回数", "1コース3着回数", "1コース4着回数", "1コース5着回数", "1コース6着回数",
-        "1コースF回数", "1コースL0回数", "1コースL1回数", "1コースK0回数", "1コースK1回数", "1コースS0回数", "1コースS1回数", "1コースS2回数",
-        "2コース1着回数", "2コース2着回数", "2コース3着回数", "2コース4着回数", "2コース5着回数", "2コース6着回数",
-        "2コースF回数", "2コースL0回数", "2コースL1回数", "2コースK0回数", "2コースK1回数", "2コースS0回数", "2コースS1回数", "2コースS2回数",
-        "3コース1着回数", "3コース2着回数", "3コース3着回数", "3コース4着回数", "3コース5着回数", "3コース6着回数",
-        "3コースF回数", "3コースL0回数", "3コースL1回数", "3コースK0回数", "3コースK1回数", "3コースS0回数", "3コースS1回数", "3コースS2回数",
-        "4コース1着回数", "4コース2着回数", "4コース3着回数", "4コース4着回数", "4コース5着回数", "4コース6着回数",
-        "4コースF回数", "4コースL0回数", "4コースL1回数", "4コースK0回数", "4コースK1回数", "4コースS0回数", "4コースS1回数", "4コースS2回数",
-        "5コース1着回数", "5コース2着回数", "5コース3着回数", "5コース4着回数", "5コース5着回数", "5コース6着回数",
-        "5コースF回数", "5コースL0回数", "5コースL1回数", "5コースK0回数", "5コースK1回数", "5コースS0回数", "5コースS1回数", "5コースS2回数",
-        "6コース1着回数", "6コース2着回数", "6コース3着回数", "6コース4着回数", "6コース5着回数", "6コース6着回数",
-        "6コースF回数", "6コースL0回数", "6コースL1回数", "6コースK0回数", "6コースK1回数", "6コースS0回数", "6コースS1回数", "6コースS2回数",
-        "コースなしL0回数", "コースなしL1回数", "コースなしK0回数", "コースなしK1回数", "出身地"
+        "登番",
+        "名前漢字",
+        "名前カナ",
+        "支部",
+        "級",
+        "年号",
+        "生年月日",
+        "性別",
+        "年齢",
+        "身長",
+        "体重",
+        "血液型",
+        "勝率",
+        "複勝率",
+        "1着回数",
+        "2着回数",
+        "出走回数",
+        "優出回数",
+        "優勝回数",
+        "平均スタートタイミング",
+        "1コース進入回数",
+        "1コース複勝率",
+        "1コース平均スタートタイミング",
+        "1コース平均スタート順位",
+        "2コース進入回数",
+        "2コース複勝率",
+        "2コース平均スタートタイミング",
+        "2コース平均スタート順位",
+        "3コース進入回数",
+        "3コース複勝率",
+        "3コース平均スタートタイミング",
+        "3コース平均スタート順位",
+        "4コース進入回数",
+        "4コース複勝率",
+        "4コース平均スタートタイミング",
+        "4コース平均スタート順位",
+        "5コース進入回数",
+        "5コース複勝率",
+        "5コース平均スタートタイミング",
+        "5コース平均スタート順位",
+        "6コース進入回数",
+        "6コース複勝率",
+        "6コース平均スタートタイミング",
+        "6コース平均スタート順位",
+        "前期級",
+        "前々期級",
+        "前々々期級",
+        "前期能力指数",
+        "今期能力指数",
+        "年",
+        "期",
+        "算出期間自",
+        "算出期間至",
+        "養成期",
+        "1コース1着回数",
+        "1コース2着回数",
+        "1コース3着回数",
+        "1コース4着回数",
+        "1コース5着回数",
+        "1コース6着回数",
+        "1コースF回数",
+        "1コースL0回数",
+        "1コースL1回数",
+        "1コースK0回数",
+        "1コースK1回数",
+        "1コースS0回数",
+        "1コースS1回数",
+        "1コースS2回数",
+        "2コース1着回数",
+        "2コース2着回数",
+        "2コース3着回数",
+        "2コース4着回数",
+        "2コース5着回数",
+        "2コース6着回数",
+        "2コースF回数",
+        "2コースL0回数",
+        "2コースL1回数",
+        "2コースK0回数",
+        "2コースK1回数",
+        "2コースS0回数",
+        "2コースS1回数",
+        "2コースS2回数",
+        "3コース1着回数",
+        "3コース2着回数",
+        "3コース3着回数",
+        "3コース4着回数",
+        "3コース5着回数",
+        "3コース6着回数",
+        "3コースF回数",
+        "3コースL0回数",
+        "3コースL1回数",
+        "3コースK0回数",
+        "3コースK1回数",
+        "3コースS0回数",
+        "3コースS1回数",
+        "3コースS2回数",
+        "4コース1着回数",
+        "4コース2着回数",
+        "4コース3着回数",
+        "4コース4着回数",
+        "4コース5着回数",
+        "4コース6着回数",
+        "4コースF回数",
+        "4コースL0回数",
+        "4コースL1回数",
+        "4コースK0回数",
+        "4コースK1回数",
+        "4コースS0回数",
+        "4コースS1回数",
+        "4コースS2回数",
+        "5コース1着回数",
+        "5コース2着回数",
+        "5コース3着回数",
+        "5コース4着回数",
+        "5コース5着回数",
+        "5コース6着回数",
+        "5コースF回数",
+        "5コースL0回数",
+        "5コースL1回数",
+        "5コースK0回数",
+        "5コースK1回数",
+        "5コースS0回数",
+        "5コースS1回数",
+        "5コースS2回数",
+        "6コース1着回数",
+        "6コース2着回数",
+        "6コース3着回数",
+        "6コース4着回数",
+        "6コース5着回数",
+        "6コース6着回数",
+        "6コースF回数",
+        "6コースL0回数",
+        "6コースL1回数",
+        "6コースK0回数",
+        "6コースK1回数",
+        "6コースS0回数",
+        "6コースS1回数",
+        "6コースS2回数",
+        "コースなしL0回数",
+        "コースなしL1回数",
+        "コースなしK0回数",
+        "コースなしK1回数",
+        "出身地",
     ]
-    
+
     with open(output_file, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        
+
         # ヘッダーを書き込み
         writer.writerow(headers)
-        
+
         # データを書き込み
         for row in results:
             writer.writerow(row)
@@ -547,15 +660,15 @@ def convert_fullwidth_spaces_in_name(text):
     """名前漢字の全角スペース変換（1文字削除、2文字以上は半角スペースに変換）"""
     if not text:
         return ""
-    
+
     import re
-    
+
     # 2文字以上の連続する全角スペースを半角スペースに変換
-    text = re.sub('　{2,}', ' ', text)
-    
+    text = re.sub("　{2,}", " ", text)
+
     # 1文字の全角スペースを削除
-    text = text.replace('　', '')
-    
+    text = text.replace("　", "")
+
     return text
 
 
@@ -570,9 +683,9 @@ def convert_halfwidth_kana_to_fullwidth(text):
     """半角カタカナを全角カタカナに変換（unicodedataライブラリを使用）"""
     if not text:
         return ""
-    
+
     # unicodedataのNFKCノーマライゼーションを使用して半角カタカナを全角カタカナに変換
-    return unicodedata.normalize('NFKC', text)
+    return unicodedata.normalize("NFKC", text)
 
 
 def main():
@@ -582,15 +695,15 @@ def main():
         print("例: python convert_racer_record.py e 2025")
         print("  e: 前期, l: 後期")
         sys.exit(1)
-    
+
     period = sys.argv[1]
     year = sys.argv[2]
-    
+
     # 期の妥当性チェック
-    if period not in ['e', 'l']:
+    if period not in ["e", "l"]:
         print("エラー: 期は 'e'（前期）または 'l'（後期）を指定してください")
         sys.exit(1)
-    
+
     # 年の妥当性チェック
     try:
         year_int = int(year)
@@ -599,35 +712,35 @@ def main():
     except ValueError:
         print("エラー: 年は4桁の数値で入力してください")
         sys.exit(1)
-    
+
     # 入力ファイル名を生成
     input_filename = f"racer_{year}{period}.txt"
     input_path = os.path.join("data", "raw", "racer_records", input_filename)
-    
+
     # ファイルの存在確認
     if not os.path.exists(input_path):
         print(f"エラー: ファイル {input_path} が見つかりません")
         sys.exit(1)
-    
+
     print(f"処理開始: {input_path}")
-    
+
     # データを解析
     results = parse_racer_data(input_path)
-    
+
     if not results:
         print("エラー: データが見つかりませんでした")
         sys.exit(1)
-    
+
     # 出力ファイル名を生成
     output_filename = f"racer_{year}{period}.csv"
     output_path = os.path.join("data", output_filename)
-    
+
     # 出力ディレクトリの作成
     os.makedirs("data", exist_ok=True)
-    
+
     # CSVファイルに出力
     write_csv(results, output_path)
-    
+
     print(f"変換完了: {len(results)}件のデータを {output_path} に出力しました")
 
 
