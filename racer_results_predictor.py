@@ -56,11 +56,53 @@ def load_data(file_path):
         sys.exit(1)
 
 
+def filter_by_date_range(df, start_date_str, end_date_str):
+    """指定された日付範囲でデータをフィルタリングする"""
+    if not start_date_str or not end_date_str:
+        return df
+
+    try:
+        # 日付文字列をdatetimeオブジェクトに変換
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+
+        # データフレームの日付列を結合してdatetimeに変換
+        df_copy = df.copy()
+        df_copy["日付文字列"] = (
+            df_copy["年"].astype(str)
+            + "-"
+            + df_copy["月"].astype(str).str.zfill(2)
+            + "-"
+            + df_copy["日"].astype(str).str.zfill(2)
+        )
+        df_copy["日付"] = pd.to_datetime(df_copy["日付文字列"], format="%Y-%m-%d")
+
+        # 日付範囲でフィルタリング
+        filtered_df = df_copy[
+            (df_copy["日付"] >= start_date) & (df_copy["日付"] <= end_date)
+        ]
+
+        # 一時的な列を削除
+        filtered_df = filtered_df.drop(["日付文字列", "日付"], axis=1)
+
+        print(f"日付フィルタリング: {start_date_str} ～ {end_date_str}")
+        print(f"フィルタリング後: {len(filtered_df)}行")
+
+        return filtered_df
+
+    except ValueError as e:
+        print(f"警告: 日付形式が正しくありません ({e})")
+        return df
+    except Exception as e:
+        print(f"警告: 日付フィルタリング中にエラーが発生しました ({e})")
+        return df
+
+
 def prepare_features(df):
     """特徴量を準備する"""
     print("特徴量を準備中...")
 
-    # 仕様書で指定された特徴量
+    # 仕様書で指定された特徴量（日付列は除外）
     feature_columns = [
         "枠番",
         "選手登番",
@@ -194,6 +236,16 @@ def save_predictions(test_data, predictions, output_file="predict_results.csv"):
     total_predictions = len(predictions)
     print(f"予測概要: 勝ち予測 {win_predictions}件 / 全体 {total_predictions}件")
 
+    # 日付範囲を表示（日付情報がある場合）
+    if all(col in result_df.columns for col in ["年", "月", "日"]):
+        min_date = (
+            f"{result_df['年'].min()}/{result_df['月'].min()}/{result_df['日'].min()}"
+        )
+        max_date = (
+            f"{result_df['年'].max()}/{result_df['月'].max()}/{result_df['日'].max()}"
+        )
+        print(f"予測対象期間: {min_date} ～ {max_date}")
+
 
 def run_train_mode(args):
     """学習モードを実行する"""
@@ -205,30 +257,78 @@ def run_train_mode(args):
     # 欠損値のある行を除外（勝敗が不明な行）
     train_data = train_data.dropna(subset=["勝敗"])
 
-    # 日付フィルタリング（引数が指定された場合）
+    # 元データをバックアップ（評価データ用）
+    original_data = train_data.copy()
+
+    # 学習用データの日付フィルタリング
     if args.start_train_date and args.end_train_date:
-        print(f"学習期間: {args.start_train_date} ～ {args.end_train_date}")
-        # 注意: 現在のデータには日付情報がないため、この機能は未実装
-        print("警告: 現在のデータ形式では日付フィルタリングはサポートされていません")
+        train_data = filter_by_date_range(
+            train_data, args.start_train_date, args.end_train_date
+        )
+        if len(train_data) == 0:
+            print("エラー: 指定された学習期間にデータがありません")
+            sys.exit(1)
 
-    # 特徴量と目的変数の準備
-    X = prepare_features(train_data)
-    y = train_data["勝敗"].astype(int)
+    # 評価用データの準備
+    eval_data = train_data.copy()  # デフォルトは学習データと同じ
 
-    # 訓練・評価データの分割
+    # 評価期間が指定されている場合
     if args.start_test_date:
-        # 日付指定がある場合（現在は未実装）
-        print("警告: 日付指定による評価データ分割は未実装です")
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=y
+        eval_end_date = (
+            args.end_test_date if args.end_test_date else args.start_test_date
         )
+        eval_data = filter_by_date_range(
+            original_data, args.start_test_date, eval_end_date
+        )
+        if len(eval_data) == 0:
+            print("エラー: 指定された評価期間にデータがありません")
+            sys.exit(1)
+
+        # 学習データから評価期間のデータを除外
+        eval_data_with_dates = eval_data.copy()
+        eval_data_with_dates["日付文字列"] = (
+            eval_data_with_dates["年"].astype(str)
+            + "-"
+            + eval_data_with_dates["月"].astype(str).str.zfill(2)
+            + "-"
+            + eval_data_with_dates["日"].astype(str).str.zfill(2)
+        )
+        eval_dates_set = set(eval_data_with_dates["日付文字列"])
+
+        train_data_with_dates = train_data.copy()
+        train_data_with_dates["日付文字列"] = (
+            train_data_with_dates["年"].astype(str)
+            + "-"
+            + train_data_with_dates["月"].astype(str).str.zfill(2)
+            + "-"
+            + train_data_with_dates["日"].astype(str).str.zfill(2)
+        )
+
+        train_data = train_data[
+            ~train_data_with_dates["日付文字列"].isin(eval_dates_set)
+        ]
+
+        print(f"学習期間と評価期間を分離しました")
+        print(f"学習データ: {len(train_data)}行")
+        print(f"評価データ: {len(eval_data)}行")
+
+        # 特徴量と目的変数の準備
+        X_train = prepare_features(train_data)
+        y_train = train_data["勝敗"].astype(int)
+        X_test = prepare_features(eval_data)
+        y_test = eval_data["勝敗"].astype(int)
+
     else:
-        # デフォルトの分割
+        # 評価期間が指定されていない場合はランダム分割
+        print("評価期間が指定されていないため、ランダム分割を使用します")
+        X = prepare_features(train_data)
+        y = train_data["勝敗"].astype(int)
+
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=42, stratify=y
         )
 
-    print(f"学習データ: {len(X_train)}行, 評価データ: {len(X_test)}行")
+    print(f"最終学習データ: {len(X_train)}行, 評価データ: {len(X_test)}行")
 
     # モデルの学習
     model = train_model(X_train, y_train)
