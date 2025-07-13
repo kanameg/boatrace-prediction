@@ -131,7 +131,7 @@ def prepare_features(df):
     return features_df
 
 
-def train_model(X_train, y_train):
+def train_model(X_train, y_train, feature_names=None):
     """ランダムフォレストモデルを学習する"""
     print("ランダムフォレストモデルを学習中...")
 
@@ -148,6 +148,21 @@ def train_model(X_train, y_train):
     model.fit(X_train, y_train)
 
     print("モデル学習完了")
+
+    # 特徴量重要度の表示
+    if feature_names is not None:
+        print("\n=== 特徴量重要度 ===")
+        feature_importance = model.feature_importances_
+        importance_df = pd.DataFrame(
+            {"特徴量": feature_names, "重要度": feature_importance}
+        ).sort_values("重要度", ascending=False)
+
+        for i, row in importance_df.iterrows():
+            print(
+                f"{row['特徴量']:<12}: {row['重要度']:.4f} ({row['重要度']*100:.2f}%)"
+            )
+        print()
+
     return model
 
 
@@ -330,8 +345,9 @@ def run_train_mode(args):
 
     print(f"最終学習データ: {len(X_train)}行, 評価データ: {len(X_test)}行")
 
-    # モデルの学習
-    model = train_model(X_train, y_train)
+    # モデルの学習（特徴量名を渡す）
+    feature_names = X_train.columns.tolist() if hasattr(X_train, "columns") else None
+    model = train_model(X_train, y_train, feature_names)
 
     # モデルの評価
     evaluate_model(model, X_test, y_test)
