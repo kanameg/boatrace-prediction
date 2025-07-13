@@ -148,12 +148,23 @@ while [ "$CURRENT_EPOCH" -le "$END_EPOCH" ]; do
     
     echo "[${CURRENT_DAY}/${TOTAL_DAYS}] ${YEAR}年${MONTH}月${DAY}日の処理中..."
     
-    # download_race.shを実行
-    if ./download_race.sh "$TYPE" "$YEAR" "$MONTH" "$DAY"; then
-        echo "  → 成功"
+    # download_race.shを実行して出力をキャプチャ
+    DOWNLOAD_OUTPUT=$(./download_race.sh "$TYPE" "$YEAR" "$MONTH" "$DAY" 2>&1)
+    DOWNLOAD_RESULT=$?
+    
+    if [ $DOWNLOAD_RESULT -eq 0 ]; then
+        # 出力内容でスキップかどうかを判定
+        if echo "$DOWNLOAD_OUTPUT" | grep -q "処理をスキップします"; then
+            echo "  → スキップ（ファイル既存）"
+            SHOULD_SLEEP=false
+        else
+            echo "  → 成功"
+            SHOULD_SLEEP=true
+        fi
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
     else
         echo "  → エラー: ${YEAR}年${MONTH}月${DAY}日のダウンロードに失敗しました"
+        echo "$DOWNLOAD_OUTPUT"
         ERROR_COUNT=$((ERROR_COUNT + 1))
         error_exit "各日付のダウンロードに失敗しました: ${YEAR}年${MONTH}月${DAY}日"
     fi
@@ -162,8 +173,8 @@ while [ "$CURRENT_EPOCH" -le "$END_EPOCH" ]; do
     CURRENT_EPOCH=$(next_day $CURRENT_EPOCH)
     CURRENT_DAY=$((CURRENT_DAY + 1))
     
-    # サーバー負荷軽減のため1秒待機（最後の日以外）
-    if [ "$CURRENT_EPOCH" -le "$END_EPOCH" ]; then
+    # サーバー負荷軽減のため1秒待機（最後の日以外、かつスキップでない場合のみ）
+    if [ "$CURRENT_EPOCH" -le "$END_EPOCH" ] && [ "$SHOULD_SLEEP" = true ]; then
         echo "  1秒待機中..."
         sleep 1
     fi
