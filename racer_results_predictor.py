@@ -41,6 +41,25 @@ def parse_arguments():
     return parser.parse_args()
 
 
+def load_config(config_file="config/features.json"):
+    """設定ファイルを読み込む"""
+    try:
+        print(f"設定ファイルを読み込んでいます: {config_file}")
+        with open(config_file, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        print("設定ファイル読み込み完了")
+        return config
+    except FileNotFoundError:
+        print(f"エラー: 設定ファイル '{config_file}' が見つかりません")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"エラー: 設定ファイルの形式が正しくありません - {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"エラー: 設定ファイルの読み込みに失敗しました - {e}")
+        sys.exit(1)
+
+
 def load_data(file_path):
     """データを読み込む"""
     try:
@@ -98,21 +117,27 @@ def filter_by_date_range(df, start_date_str, end_date_str):
         return df
 
 
-def prepare_features(df):
+def prepare_features(df, config=None):
     """特徴量を準備する"""
     print("特徴量を準備中...")
 
-    # 仕様書で指定された特徴量（日付列は除外）
-    feature_columns = [
-        "枠番",
-        "選手登番",
-        "年齢",
-        "体重",
-        "級別",
-        "全国勝率",
-        "モーター2連率",
-        "ボート2連率",
-    ]
+    # 設定ファイルから特徴量を取得、なければデフォルト値を使用
+    if config is not None:
+        feature_columns = config.get("features", [])
+    else:
+        # デフォルト特徴量（後方互換性のため）
+        feature_columns = [
+            "枠番",
+            "選手登番",
+            "年齢",
+            "体重",
+            "級別",
+            "全国勝率",
+            "モーター2連率",
+            "ボート2連率",
+        ]
+
+    print(f"使用する特徴量: {feature_columns}")
 
     # 特徴量のみを抽出
     features_df = df[feature_columns].copy()
@@ -126,7 +151,6 @@ def prepare_features(df):
     features_df = features_df.fillna(features_df.mean())
 
     print(f"特徴量準備完了: {len(features_df)}行、{len(features_df.columns)}列")
-    print(f"使用する特徴量: {list(features_df.columns)}")
 
     return features_df
 
@@ -216,12 +240,12 @@ def load_model(file_path="model/random_forest_model.pkl"):
         sys.exit(1)
 
 
-def predict_results(model, test_data):
+def predict_results(model, test_data, config=None):
     """予測を実行する"""
     print("予測を実行中...")
 
     # 特徴量の準備
-    X_test = prepare_features(test_data)
+    X_test = prepare_features(test_data, config)
 
     # 予測実行
     predictions = model.predict(X_test)
@@ -265,6 +289,9 @@ def save_predictions(test_data, predictions, output_file="predict_results.csv"):
 def run_train_mode(args):
     """学習モードを実行する"""
     print("=== 学習モード実行 ===")
+
+    # 設定ファイルの読み込み
+    config = load_config()
 
     # データの読み込み
     train_data = load_data("data/train.csv")
@@ -328,15 +355,15 @@ def run_train_mode(args):
         print(f"評価データ: {len(eval_data)}行")
 
         # 特徴量と目的変数の準備
-        X_train = prepare_features(train_data)
+        X_train = prepare_features(train_data, config)
         y_train = train_data["勝敗"].astype(int)
-        X_test = prepare_features(eval_data)
+        X_test = prepare_features(eval_data, config)
         y_test = eval_data["勝敗"].astype(int)
 
     else:
         # 評価期間が指定されていない場合はランダム分割
         print("評価期間が指定されていないため、ランダム分割を使用します")
-        X = prepare_features(train_data)
+        X = prepare_features(train_data, config)
         y = train_data["勝敗"].astype(int)
 
         X_train, X_test, y_train, y_test = train_test_split(
@@ -362,6 +389,9 @@ def run_predict_mode():
     """予測モードを実行する"""
     print("=== 予測モード実行 ===")
 
+    # 設定ファイルの読み込み
+    config = load_config()
+
     # 学習済みモデルの読み込み
     model = load_model()
 
@@ -369,7 +399,7 @@ def run_predict_mode():
     test_data = load_data("data/test.csv")
 
     # 予測実行
-    predictions = predict_results(model, test_data)
+    predictions = predict_results(model, test_data, config)
 
     # 予測結果の保存
     save_predictions(test_data, predictions)
