@@ -120,9 +120,12 @@ def extract_features(df):
     """必要な特徴量を抽出する"""
     print("選手情報の特徴量を抽出中...")
 
-    # 仕様書で指定された列を抽出（日付とレース識別情報は除外）
+    # 仕様書で指定された列を抽出（日付情報を含める）
     # 注意: '性別'はデータに含まれていないため除外
     required_columns = [
+        "年",  # 日付情報
+        "月",  # 日付情報
+        "日",  # 日付情報
         "枠番",
         "選手登番",
         "年齢",
@@ -179,6 +182,12 @@ def print_data_summary(df, mode):
     """データの概要を表示する"""
     print(f"\n=== {mode.upper()}データの概要 ===")
     print(f"データ数: {len(df)}行")
+
+    # 日付情報が含まれている場合は期間を表示
+    if all(col in df.columns for col in ["年", "月", "日"]):
+        print(
+            f"期間: {df['年'].min()}/{df['月'].min()}/{df['日'].min()} ～ {df['年'].max()}/{df['月'].max()}/{df['日'].max()}"
+        )
 
     if "レース場番号" in df.columns:
         race_tracks = sorted(df["レース場番号"].unique())
