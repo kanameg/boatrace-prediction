@@ -182,10 +182,12 @@ def print_data_summary(df, mode):
     """データの概要を表示する"""
     print(f"\n=== {mode.upper()}データの概要 ===")
     print(f"データ数: {len(df)}行")
-    
+
     # 日付情報が含まれている場合は期間を表示
     if all(col in df.columns for col in ["年", "月", "日"]):
-        print(f"期間: {df['年'].min()}/{df['月'].min()}/{df['日'].min()} ～ {df['年'].max()}/{df['月'].max()}/{df['日'].max()}")
+        print(
+            f"期間: {df['年'].min()}/{df['月'].min()}/{df['日'].min()} ～ {df['年'].max()}/{df['月'].max()}/{df['日'].max()}"
+        )
 
     if "レース場番号" in df.columns:
         race_tracks = sorted(df["レース場番号"].unique())
