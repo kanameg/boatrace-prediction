@@ -96,6 +96,8 @@ def convert_race_programs():
             try:
                 if ranking == 1 or ranking == "1" or int(ranking) == 1:
                     frame_data["勝敗"] = 1
+                elif ranking == 2 or ranking == "2" or int(ranking) == 2:
+                    frame_data["勝敗"] = 1
                 else:
                     frame_data["勝敗"] = 0
             except (ValueError, TypeError):
