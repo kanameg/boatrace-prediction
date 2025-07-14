@@ -489,13 +489,13 @@ def run_predict_mode():
     model = load_model()
 
     # テストデータの読み込み
-    test_data = load_data("data/test.csv")
+    pred_data = load_data("data/pred.csv")
 
     # 予測実行
-    predictions = predict_results(model, test_data, config)
+    predictions = predict_results(model, pred_data, config)
 
     # 予測結果の保存
-    save_predictions(test_data, predictions)
+    save_predictions(pred_data, predictions)
 
 
 def main():

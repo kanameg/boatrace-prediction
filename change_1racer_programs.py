@@ -64,6 +64,8 @@ def load_racer_data():
             "4コース2着回数": row.get("4コース2着回数", ""),
             "5コース2着回数": row.get("5コース2着回数", ""),
             "6コース2着回数": row.get("6コース2着回数", ""),
+            "1着回数": row.get("1着回数", ""),
+            "2着回数": row.get("2着回数", ""),
         }
 
     print(f"選手データを{len(racer_dict)}件読み込みました")
@@ -157,6 +159,18 @@ def convert_race_programs():
             else:
                 frame_data["コース別2着回数"] = ""
 
+            # 全体1着回数を追加
+            if racer_number and racer_number in racer_dict:
+                frame_data["1着回数"] = racer_dict[racer_number].get("1着回数", "")
+            else:
+                frame_data["1着回数"] = ""
+
+            # 全体2着回数を追加
+            if racer_number and racer_number in racer_dict:
+                frame_data["2着回数"] = racer_dict[racer_number].get("2着回数", "")
+            else:
+                frame_data["2着回数"] = ""
+
             # 着順情報を追加
             key = (
                 row["年"],
@@ -213,6 +227,8 @@ def convert_race_programs():
         "コース別平均スタート順位",
         "コース別1着回数",
         "コース別2着回数",
+        "1着回数",
+        "2着回数",
         "着順",
         "勝敗",
     ]
