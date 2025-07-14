@@ -4,7 +4,7 @@
 # 競走成績・番組表ダウンロードスクリプト
 # 指定されたタイプ（競走成績または番組表）のデータをダウンロード、解凍、文字コード変換を行う
 #
-# 使用方法: ./download_race.sh [p|r] YYYY MM DD
+# 使用方法: ./download_race.sh [p|r] YYYY-MM-DD
 #
 
 # エラー処理を有効にする
@@ -18,43 +18,45 @@ error_exit() {
 
 # 関数: 使用方法を表示
 show_usage() {
-    echo "使用方法: $0 [p|r] YYYY MM DD"
+    echo "使用方法: $0 [p|r] YYYY-MM-DD"
     echo "  p: 番組表をダウンロード"
     echo "  r: 競走成績をダウンロード"
-    echo "  YYYY: 年4桁（例: 2025）"
-    echo "  MM: 1桁または2桁の月（例: 7 または 07）"
-    echo "  DD: 1桁または2桁の日（例: 9 または 09）"
+    echo "  YYYY-MM-DD: 日付（例: 2025-07-13 または 2025-7-13）"
     exit 1
 }
 
 # 引数チェック
-if [ $# -ne 4 ]; then
+if [ $# -ne 2 ]; then
     echo "エラー: 引数が不足しています。"
     show_usage
 fi
 
 TYPE=$1
-YEAR=$2
-MONTH=$3
-DAY=$4
+DATE_ARG=$2
 
 # タイプの妥当性チェック
 if [[ "$TYPE" != "p" && "$TYPE" != "r" ]]; then
     error_exit "タイプは 'p'（番組表）または 'r'（競走成績）を指定してください: $TYPE"
 fi
 
-# 引数の妥当性チェック
-if ! [[ "$YEAR" =~ ^[0-9]{4}$ ]]; then
-    error_exit "年は4桁の数値で入力してください: $YEAR"
+# 日付形式のチェック（YYYY-MM-DD または YYYY-M-D）
+if ! [[ "$DATE_ARG" =~ ^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}$ ]]; then
+    error_exit "日付はYYYY-MM-DD形式で入力してください（0埋めなしも可）: $DATE_ARG"
 fi
 
-if ! [[ "$MONTH" =~ ^[0-9]{1,2}$ ]] || [ "$MONTH" -lt 1 ] || [ "$MONTH" -gt 12 ]; then
-    error_exit "月は1〜12の範囲で入力してください: $MONTH"
+# 日付を分割
+YEAR=$(echo $DATE_ARG | cut -d'-' -f1)
+MONTH=$(echo $DATE_ARG | cut -d'-' -f2)
+DAY=$(echo $DATE_ARG | cut -d'-' -f3)
+
+# 日付の妥当性チェック
+if ! date -d "$DATE_ARG" > /dev/null 2>&1; then
+    error_exit "無効な日付です: $DATE_ARG"
 fi
 
-if ! [[ "$DAY" =~ ^[0-9]{1,2}$ ]] || [ "$DAY" -lt 1 ] || [ "$DAY" -gt 31 ]; then
-    error_exit "日は1〜31の範囲で入力してください: $DAY"
-fi
+# 数値変換（先頭の0を除去）
+MONTH=$((10#$MONTH))
+DAY=$((10#$DAY))
 
 # フォーマット調整（0埋め）
 YEAR_FULL=$(printf "%04d" $YEAR)
@@ -89,7 +91,7 @@ DOWNLOAD_URL="https://www1.mbrace.or.jp/od2/${URL_PATH}/${YEAR_FULL}${MONTH_PADD
 ARCHIVE_PATH="${ARCHIVE_FILENAME}"  # カレントディレクトリに一時保存
 RESULT_PATH="${OUTPUT_DIR}/${UTF8_FILENAME}"
 
-echo "処理開始: ${YEAR_FULL}年${MONTH}月${DAY}日の${TYPE_NAME}データを処理します"
+echo "処理開始: ${DATE_ARG}の${TYPE_NAME}データを処理します"
 echo "ダウンロードURL: ${DOWNLOAD_URL}"
 
 # 既にファイルが存在する場合はスキップ
@@ -143,5 +145,5 @@ if [ -f "$RESULT_FILENAME" ]; then
     echo "Shift-JISファイルを削除しました: $RESULT_FILENAME"
 fi
 
-echo "処理完了: ${YEAR_FULL}年${MONTH}月${DAY}日の${TYPE_NAME}データ処理が正常に完了しました"
+echo "処理完了: ${DATE_ARG}の${TYPE_NAME}データ処理が正常に完了しました"
 echo "出力ファイル: $RESULT_PATH"

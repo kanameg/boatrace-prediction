@@ -812,22 +812,25 @@ class ResultConverter:
 
 def main():
     """メイン関数"""
-    if len(sys.argv) != 4:
-        print("使用方法: python convert_result.py YYYY MM DD")
-        print("  YYYY: 年4桁（例: 2025）")
-        print("  MM: 1桁または2桁の月（例: 7）")
-        print("  DD: 1桁または2桁の日（例: 9）")
+    if len(sys.argv) != 2:
+        print("使用方法: python convert_result.py YYYY-MM-DD")
+        print("  YYYY-MM-DD: 日付（例: 2025-07-13 または 2025-7-13）")
         return 1
 
     try:
-        year = int(sys.argv[1])
-        month = int(sys.argv[2])
-        day = int(sys.argv[3])
-    except ValueError:
-        print("エラー: 引数は数値で入力してください")
-        return 1
+        date_str = sys.argv[1]
 
-    try:
+        # 日付形式のチェック
+        if not re.match(r"^\d{4}-\d{1,2}-\d{1,2}$", date_str):
+            print(f"エラー: 日付はYYYY-MM-DD形式で入力してください: {date_str}")
+            return 1
+
+        # 日付を分割
+        parts = date_str.split("-")
+        year = int(parts[0])
+        month = int(parts[1])
+        day = int(parts[2])
+
         # 引数の妥当性チェック
         if not (1900 <= year <= 2100):
             print(f"エラー: 年は1900〜2100の範囲で入力してください: {year}")
@@ -841,6 +844,15 @@ def main():
             print(f"エラー: 日は1〜31の範囲で入力してください: {day}")
             return 1
 
+        # 日付の妥当性チェック（実際の日付として有効か）
+        try:
+            import datetime
+
+            datetime.date(year, month, day)
+        except ValueError:
+            print(f"エラー: 無効な日付です: {date_str}")
+            return 1
+
         # 出力ディレクトリの作成
         os.makedirs("data", exist_ok=True)
 
@@ -848,6 +860,9 @@ def main():
         converter = ResultConverter()
         return converter.convert_file(year, month, day)
 
+    except ValueError:
+        print("エラー: 日付の解析に失敗しました")
+        return 1
     except Exception as e:
         print(f"エラー: 予期しないエラーが発生しました: {e}")
         return 1
