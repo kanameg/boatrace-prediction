@@ -3,8 +3,6 @@
 レース番組表データを各枠ごとに1行に変換し、着順情報を追加するプログラム
 """
 
-import sys
-
 import pandas as pd
 
 
@@ -233,6 +231,9 @@ def convert_race_programs():
     # 変換結果の確認表示
     print("\n変換結果の先頭5行:")
     print(result_df.head())
+
+    print("\n変換結果の末尾5行:")
+    print(result_df.tail())
 
     return result_df
 
