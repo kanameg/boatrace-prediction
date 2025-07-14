@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-学習データ作成プログラム
+学習・予測用データ作成プログラム
 
 このプログラムは、競艇のレース結果データを基に、選手やレースの特徴を抽出し、
 機械学習モデルの学習に使用するデータセットを作成します。
@@ -9,6 +9,7 @@
 import argparse
 import json
 import os
+import re
 import sys
 from datetime import datetime
 
@@ -17,19 +18,23 @@ import pandas as pd
 
 def parse_arguments():
     """コマンドライン引数を解析する"""
-    parser = argparse.ArgumentParser(description="競艇学習データ作成プログラム")
+    parser = argparse.ArgumentParser(
+        description="ボートレース学習・予測用データ作成プログラム"
+    )
 
     parser.add_argument(
         "mode",
-        choices=["train", "test"],
-        help="データ種別 (train: 学習用, test: テスト用)",
+        choices=["train", "pred"],
+        help="データ種別 (train: 学習用, pred: 予測用)",
     )
-    parser.add_argument("start_year", type=int, help="開始年 (YYYY)")
-    parser.add_argument("start_month", type=int, help="開始月 (MM)")
-    parser.add_argument("start_day", type=int, help="開始日 (DD)")
-    parser.add_argument("end_year", type=int, nargs="?", help="終了年 (YYYY) - 省略可")
-    parser.add_argument("end_month", type=int, nargs="?", help="終了月 (MM) - 省略可")
-    parser.add_argument("end_day", type=int, nargs="?", help="終了日 (DD) - 省略可")
+    parser.add_argument(
+        "start_date", help="開始日 (YYYY-MM-DD形式、例: 2025-07-01 または 2025-7-1)"
+    )
+    parser.add_argument(
+        "end_date",
+        nargs="?",
+        help="終了日 (YYYY-MM-DD形式、例: 2025-07-09 または 2025-7-9) - 省略可、省略時は開始日と同じ",
+    )
     parser.add_argument(
         "race_track",
         type=int,
@@ -39,11 +44,35 @@ def parse_arguments():
 
     args = parser.parse_args()
 
-    # 終了日が省略された場合は開始日と同じにする
-    if args.end_year is None:
-        args.end_year = args.start_year
-        args.end_month = args.start_month
-        args.end_day = args.start_day
+    # 日付文字列を解析
+    try:
+        if not re.match(r"^\d{4}-\d{1,2}-\d{1,2}$", args.start_date):
+            raise ValueError(f"開始日の形式が正しくありません: {args.start_date}")
+
+        start_parts = args.start_date.split("-")
+        args.start_year = int(start_parts[0])
+        args.start_month = int(start_parts[1])
+        args.start_day = int(start_parts[2])
+
+        # 終了日が省略された場合は開始日と同じにする
+        if args.end_date is None:
+            args.end_date = args.start_date
+            args.end_year = args.start_year
+            args.end_month = args.start_month
+            args.end_day = args.start_day
+        else:
+            if not re.match(r"^\d{4}-\d{1,2}-\d{1,2}$", args.end_date):
+                raise ValueError(f"終了日の形式が正しくありません: {args.end_date}")
+
+            end_parts = args.end_date.split("-")
+            args.end_year = int(end_parts[0])
+            args.end_month = int(end_parts[1])
+            args.end_day = int(end_parts[2])
+
+    except ValueError as e:
+        print(f"エラー: {e}")
+        print("日付はYYYY-MM-DD形式で入力してください（0埋めなしも可）")
+        sys.exit(1)
 
     return args
 

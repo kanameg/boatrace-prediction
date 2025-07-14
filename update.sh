@@ -45,18 +45,26 @@ echo "翌日: $NEXT_DATE"
 echo "========================================="
 
 # 1. 本日までの競走結果データを取得
+echo ""
+echo "----------------------------------------------------"
 echo "1. 本日までの競走結果データを取得中..."
 ./download_race.sh r $TARGET_DATE
 
 # 2. 翌日の番組表データを取得
+echo ""
+echo "----------------------------------------------------"
 echo "2. 翌日の番組表データを取得中..."
 ./download_race.sh p $NEXT_DATE
 
 # 3. 本日までの競走結果データを変換
+echo ""
+echo "----------------------------------------------------"
 echo "3. 本日までの競走結果データを変換中..."
 ./convert_results.sh $START_DATE $TARGET_DATE
 
 # 4. 翌日の番組表データを変換
+echo ""
+echo "----------------------------------------------------"
 echo "4. 翌日の番組表データを変換中..."
 ./convert_programs.sh $START_DATE $NEXT_DATE
 
@@ -64,16 +72,20 @@ echo "4. 翌日の番組表データを変換中..."
 # ---------------------------------------------------
 # 学習・予測用にレース番組表データを形式変換
 # ---------------------------------------------------
+echo ""
+echo "----------------------------------------------------"
 echo "5. レース番組データを1選手1行形式に変換中..."
 python change_1racer_programs.py
 
-# # 6. トレーニング用データを作成
-# echo "6. トレーニング用データを作成中..."
-# python generate_tt_data.py train 2025 1 1 $YEAR $MONTH $DAY
+# 6. 学習・予測用データを作成
+echo ""
+echo "----------------------------------------------------"
+echo "6. 学習・予測用データを作成中..."
+python generate_ml_data.py train $START_DATE $TARGET_DATE
 
-# # 7. 予測用データを作成
-# echo "7. 予測用データを作成中..."
-# python generate_tt_data.py test $NEXT_YEAR $NEXT_MONTH $NEXT_DAY
+# 7. 予測用データを作成
+echo "7. 予測用データを作成中..."
+python generate_ml_data.py pred $NEXT_DATE
 
 # # 8. LightGBMモデルで学習・評価を実行
 # echo "8. LightGBMモデルで学習・評価を実行中..."
