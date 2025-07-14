@@ -25,6 +25,12 @@ DAY=$(echo $TARGET_DATE | cut -d'-' -f3)
 # 対象日のepoch秒を取得
 TARGET_EPOCH=$(date -d "$TARGET_DATE" +%s)
 
+# 前日のepoch秒を計算（24時間 = 86400秒を引く）
+PREV_EPOCH=$((TARGET_EPOCH - 86400))
+
+# 前日の日付を取得
+PREV_DATE=$(date -d "@$PREV_EPOCH" +%Y-%m-%d)
+
 # 翌日のepoch秒を計算（24時間 = 86400秒を足す）
 NEXT_EPOCH=$((TARGET_EPOCH + 86400))
 
@@ -40,6 +46,7 @@ DAY=$(printf "%02d" $((10#$DAY)))
 
 echo "========================================="
 echo "競艇予測処理開始"
+echo "前日: $PREV_DATE"
 echo "本日: $TARGET_DATE"
 echo "翌日: $NEXT_DATE"
 echo "========================================="
@@ -84,28 +91,31 @@ echo "6. 学習・予測用データを作成中..."
 python generate_ml_data.py train $START_DATE $TARGET_DATE
 
 # 7. 予測用データを作成
+echo ""
+echo "----------------------------------------------------"
 echo "7. 予測用データを作成中..."
 python generate_ml_data.py pred $NEXT_DATE
 
-# # 8. LightGBMモデルで学習・評価を実行
-# echo "8. LightGBMモデルで学習・評価を実行中..."
-# TRAIN_END_DATE="$YEAR-$MONTH-$DAY"
-# # 本日の日付を評価日として使用
-# python racer_lgbm_predictor.py train 2025-01-01 $TRAIN_END_DATE $TRAIN_END_DATE
+# 8. LightGBMモデルで学習・評価を実行
+echo ""
+echo "----------------------------------------------------"
+echo "8. LightGBMモデルで学習・評価を実行中..."
+TRAIN_END_DATE="$YEAR-$MONTH-$DAY"
+# 本日の日付を評価日として使用
+python predict_single_lgbm.py train $START_DATE $PREV_DATE $TARGET_DATE
 
-# # 9. LightGBMモデルで予測を実行
-# echo "9. LightGBMモデルで予測を実行中..."
-# python racer_lgbm_predictor.py predict $NEXT_DATE
+# 9. LightGBMモデルで予測を実行
+echo ""
+echo "----------------------------------------------------"
+echo "9. LightGBMモデルで予測を実行中..."
+python predict_single_lgbm.py pred $NEXT_DATE
 
-# # 10. RandomForestモデルでも予測を実行（比較用）
-# echo "10. RandomForestモデルで予測を実行中..."
-# python racer_randomf_predictor.py predict $NEXT_DATE
 
 echo "========================================="
 echo "競艇予測処理完了"
 echo "予測対象日: $NEXT_DATE"
 echo "結果ファイル:"
-echo "  - predict_results.csv (予測結果)"
-echo "  - evaluation_results.csv (評価結果)"
+echo "  - predict_result.csv (予測結果)"
+echo "  - evaluation_result.csv (評価結果)"
 echo "========================================="
 

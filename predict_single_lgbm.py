@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
-勝敗予測プログラム
+単勝(single win)予測プログラム
 
-このプログラムは、競艇の勝敗を予測するLightGBMモデルを
+このプログラムは、競艇のを予測するLightGBMモデルを
 作成・学習・予測するためのプログラムです。
 """
 
@@ -22,13 +22,12 @@ from sklearn.model_selection import train_test_split
 
 def parse_arguments():
     """コマンドライン引数を解析する"""
-    parser = argparse.ArgumentParser(description="競艇勝敗予測プログラム")
+    parser = argparse.ArgumentParser(description="ボートレース単勝予測プログラム")
 
     parser.add_argument(
         "mode",
-        nargs="?",
-        choices=["train", "predict"],
-        help="実行モード (train: 学習, predict: 予測, 省略時: 両方実行)",
+        choices=["train", "pred"],
+        help="実行モード (train: 学習, pred: 予測)",
     )
     parser.add_argument("start_train_date", nargs="?", help="学習開始日 (YYYY-MM-DD)")
     parser.add_argument("end_train_date", nargs="?", help="学習終了日 (YYYY-MM-DD)")
@@ -275,7 +274,7 @@ def predict_results(model, test_data, config=None):
     return predictions
 
 
-def save_predictions(test_data, predictions, output_file="predict_results.csv"):
+def save_predictions(test_data, predictions, output_file="predict_result.csv"):
     """予測結果を保存する"""
     print(f"予測結果を保存中: {output_file}")
 
@@ -330,7 +329,7 @@ def save_predictions(test_data, predictions, output_file="predict_results.csv"):
 
 
 def save_evaluation_results(
-    eval_data, predictions, output_file="evaluation_results.csv"
+    eval_data, predictions, output_file="evaluation_result.csv"
 ):
     """評価結果を保存する"""
     print(f"評価結果を保存中: {output_file}")
@@ -506,14 +505,9 @@ def main():
     # コマンドライン引数の解析
     args = parse_arguments()
 
-    if args.mode is None:
-        # 引数なしの場合は学習→予測の順で実行
-        print("学習・予測両方のモードを実行します")
+    if args.mode == "train":
         run_train_mode(args)
-        run_predict_mode()
-    elif args.mode == "train":
-        run_train_mode(args)
-    elif args.mode == "predict":
+    elif args.mode == "pred":
         run_predict_mode()
 
     print("プログラム実行完了")
