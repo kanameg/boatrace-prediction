@@ -23,12 +23,14 @@ Made changes.
 ### **日常の更新**（新しいデータが少ない場合）
 ```bash
 # 増分インポート（重複を自動回避）
+cd db
 ./import_programs_incremental.sh
 ```
 
 ### **定期的なフルリフレッシュ**（月次など）
 ```bash
 # 完全リフレッシュ（データ整合性確保）
+cd db
 ./import_programs.sh
 ```
 
