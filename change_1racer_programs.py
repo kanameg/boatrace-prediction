@@ -8,8 +8,8 @@ import pandas as pd
 
 def load_race_results():
     """レース結果データを読み込み、着順情報の辞書を作成"""
-    print("race_results.csvを読み込み中...")
-    results_df = pd.read_csv("/app/data/race_results.csv")
+    print("results.csvを読み込み中...")
+    results_df = pd.read_csv("/app/data/results.csv")
 
     # 着順情報を辞書で管理（キー: (年, 月, 日, レース場番号, レース番号, 選手登番), 値: 着順）
     ranking_dict = {}

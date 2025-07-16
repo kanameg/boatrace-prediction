@@ -87,7 +87,7 @@ echo "競走結果データ一括変換開始"
 echo "期間: $START_DATE 〜 $END_DATE"
 
 # 既存の出力ファイルを削除（毎回作り直すため）
-OUTPUT_FILE="data/race_results.csv"
+OUTPUT_FILE="data/results.csv"
 if [ -f "$OUTPUT_FILE" ]; then
     echo "既存のファイルを削除します: $OUTPUT_FILE"
     rm "$OUTPUT_FILE"
@@ -141,6 +141,6 @@ if [ "$ERROR_COUNT" -gt 0 ]; then
     exit 1
 else
     echo "全ての処理が正常に完了しました。"
-    echo "出力ファイル: data/race_results.csv"
+    echo "出力ファイル: data/results.csv"
     exit 0
 fi

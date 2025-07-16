@@ -582,7 +582,7 @@ class ResultConverter:
         # ファイル名生成
         year_short = year % 100
         input_file = f"data/raw/results/k{year_short:02d}{month:02d}{day:02d}_u8.txt"
-        output_file = "data/race_results.csv"
+        output_file = "data/results.csv"
 
         if not os.path.exists(input_file):
             print(f"エラー: 入力ファイルが見つかりません: {input_file}")

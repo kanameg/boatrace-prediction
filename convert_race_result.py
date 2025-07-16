@@ -3,7 +3,7 @@
 """
 ボートレース結果データ変換プログラム
 入力: k{年}{月:02d}{日:02d}_u8.txt
-出力: race_results.csv
+出力: results.csv
 """
 
 import csv
@@ -266,7 +266,7 @@ def main():
         sys.exit(1)
 
     # CSVファイルに出力
-    output_file = "race_results.csv"
+    output_file = "results.csv"
     write_csv(results, output_file)
 
     print(f"変換完了: {len(results)}件のデータを {output_file} に出力しました")
