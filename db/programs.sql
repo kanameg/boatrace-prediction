@@ -1,0 +1,211 @@
+-- レース番組表テーブル作成用SQLスクリプト
+-- data/programs.csvをインポートするためのテーブル定義
+
+-- 既存のテーブルを削除（存在する場合）
+DROP TABLE IF EXISTS programs;
+
+-- 一時インポート用テーブル（CSVと同じカラム名）
+DROP TABLE IF EXISTS temp_programs;
+CREATE TABLE temp_programs (
+  年 INTEGER,
+  月 INTEGER,
+  日 INTEGER,
+  レース場番号 INTEGER,
+  レース番号 INTEGER,
+  距離 INTEGER,
+  投票締切時間 TEXT,
+  '1艇_選手登番' INTEGER,
+  '1艇_年齢' INTEGER,
+  '1艇_支部' TEXT,
+  '1艇_体重' REAL,
+  '1艇_級別' TEXT,
+  '1艇_全国勝率' REAL,
+  '1艇_全国2連率' REAL,
+  '1艇_当地勝率' REAL,
+  '1艇_当地2連率' REAL,
+  '1艇_モーター番号' INTEGER,
+  '1艇_モーター2連率' REAL,
+  '1艇_ボート番号' INTEGER,
+  '1艇_ボート2連率' REAL,
+  '2艇_選手登番' INTEGER,
+  '2艇_年齢' INTEGER,
+  '2艇_支部' TEXT,
+  '2艇_体重' REAL,
+  '2艇_級別' TEXT,
+  '2艇_全国勝率' REAL,
+  '2艇_全国2連率' REAL,
+  '2艇_当地勝率' REAL,
+  '2艇_当地2連率' REAL,
+  '2艇_モーター番号' INTEGER,
+  '2艇_モーター2連率' REAL,
+  '2艇_ボート番号' INTEGER,
+  '2艇_ボート2連率' REAL,
+  '3艇_選手登番' INTEGER,
+  '3艇_年齢' INTEGER,
+  '3艇_支部' TEXT,
+  '3艇_体重' REAL,
+  '3艇_級別' TEXT,
+  '3艇_全国勝率' REAL,
+  '3艇_全国2連率' REAL,
+  '3艇_当地勝率' REAL,
+  '3艇_当地2連率' REAL,
+  '3艇_モーター番号' INTEGER,
+  '3艇_モーター2連率' REAL,
+  '3艇_ボート番号' INTEGER,
+  '3艇_ボート2連率' REAL,
+  '4艇_選手登番' INTEGER,
+  '4艇_年齢' INTEGER,
+  '4艇_支部' TEXT,
+  '4艇_体重' REAL,
+  '4艇_級別' TEXT,
+  '4艇_全国勝率' REAL,
+  '4艇_全国2連率' REAL,
+  '4艇_当地勝率' REAL,
+  '4艇_当地2連率' REAL,
+  '4艇_モーター番号' INTEGER,
+  '4艇_モーター2連率' REAL,
+  '4艇_ボート番号' INTEGER,
+  '4艇_ボート2連率' REAL,
+  '5艇_選手登番' INTEGER,
+  '5艇_年齢' INTEGER,
+  '5艇_支部' TEXT,
+  '5艇_体重' REAL,
+  '5艇_級別' TEXT,
+  '5艇_全国勝率' REAL,
+  '5艇_全国2連率' REAL,
+  '5艇_当地勝率' REAL,
+  '5艇_当地2連率' REAL,
+  '5艇_モーター番号' INTEGER,
+  '5艇_モーター2連率' REAL,
+  '5艇_ボート番号' INTEGER,
+  '5艇_ボート2連率' REAL,
+  '6艇_選手登番' INTEGER,
+  '6艇_年齢' INTEGER,
+  '6艇_支部' TEXT,
+  '6艇_体重' REAL,
+  '6艇_級別' TEXT,
+  '6艇_全国勝率' REAL,
+  '6艇_全国2連率' REAL,
+  '6艇_当地勝率' REAL,
+  '6艇_当地2連率' REAL,
+  '6艇_モーター番号' INTEGER,
+  '6艇_モーター2連率' REAL,
+  '6艇_ボート番号' INTEGER,
+  '6艇_ボート2連率' REAL
+);
+
+-- 本テーブル（英語カラム名）
+CREATE TABLE programs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  year INTEGER NOT NULL,
+  month INTEGER NOT NULL,
+  day INTEGER NOT NULL,
+  venue_code INTEGER NOT NULL,
+  race_number INTEGER NOT NULL,
+  distance_m INTEGER NOT NULL,
+  deadline_time TEXT NOT NULL,
+  
+  -- 1号艇
+  racer1_number INTEGER NOT NULL,
+  racer1_age INTEGER NOT NULL,
+  racer1_branch TEXT NOT NULL,
+  racer1_weight REAL NOT NULL,
+  racer1_class TEXT NOT NULL,
+  racer1_national_win_rate REAL NOT NULL,
+  racer1_national_quinella_rate REAL NOT NULL,
+  racer1_local_win_rate REAL NOT NULL,
+  racer1_local_quinella_rate REAL NOT NULL,
+  racer1_motor_number INTEGER NOT NULL,
+  racer1_motor_quinella_rate REAL NOT NULL,
+  racer1_boat_number INTEGER NOT NULL,
+  racer1_boat_quinella_rate REAL NOT NULL,
+  
+  -- 2号艇
+  racer2_number INTEGER NOT NULL,
+  racer2_age INTEGER NOT NULL,
+  racer2_branch TEXT NOT NULL,
+  racer2_weight REAL NOT NULL,
+  racer2_class TEXT NOT NULL,
+  racer2_national_win_rate REAL NOT NULL,
+  racer2_national_quinella_rate REAL NOT NULL,
+  racer2_local_win_rate REAL NOT NULL,
+  racer2_local_quinella_rate REAL NOT NULL,
+  racer2_motor_number INTEGER NOT NULL,
+  racer2_motor_quinella_rate REAL NOT NULL,
+  racer2_boat_number INTEGER NOT NULL,
+  racer2_boat_quinella_rate REAL NOT NULL,
+  
+  -- 3号艇
+  racer3_number INTEGER NOT NULL,
+  racer3_age INTEGER NOT NULL,
+  racer3_branch TEXT NOT NULL,
+  racer3_weight REAL NOT NULL,
+  racer3_class TEXT NOT NULL,
+  racer3_national_win_rate REAL NOT NULL,
+  racer3_national_quinella_rate REAL NOT NULL,
+  racer3_local_win_rate REAL NOT NULL,
+  racer3_local_quinella_rate REAL NOT NULL,
+  racer3_motor_number INTEGER NOT NULL,
+  racer3_motor_quinella_rate REAL NOT NULL,
+  racer3_boat_number INTEGER NOT NULL,
+  racer3_boat_quinella_rate REAL NOT NULL,
+  
+  -- 4号艇
+  racer4_number INTEGER NOT NULL,
+  racer4_age INTEGER NOT NULL,
+  racer4_branch TEXT NOT NULL,
+  racer4_weight REAL NOT NULL,
+  racer4_class TEXT NOT NULL,
+  racer4_national_win_rate REAL NOT NULL,
+  racer4_national_quinella_rate REAL NOT NULL,
+  racer4_local_win_rate REAL NOT NULL,
+  racer4_local_quinella_rate REAL NOT NULL,
+  racer4_motor_number INTEGER NOT NULL,
+  racer4_motor_quinella_rate REAL NOT NULL,
+  racer4_boat_number INTEGER NOT NULL,
+  racer4_boat_quinella_rate REAL NOT NULL,
+  
+  -- 5号艇
+  racer5_number INTEGER NOT NULL,
+  racer5_age INTEGER NOT NULL,
+  racer5_branch TEXT NOT NULL,
+  racer5_weight REAL NOT NULL,
+  racer5_class TEXT NOT NULL,
+  racer5_national_win_rate REAL NOT NULL,
+  racer5_national_quinella_rate REAL NOT NULL,
+  racer5_local_win_rate REAL NOT NULL,
+  racer5_local_quinella_rate REAL NOT NULL,
+  racer5_motor_number INTEGER NOT NULL,
+  racer5_motor_quinella_rate REAL NOT NULL,
+  racer5_boat_number INTEGER NOT NULL,
+  racer5_boat_quinella_rate REAL NOT NULL,
+  
+  -- 6号艇
+  racer6_number INTEGER NOT NULL,
+  racer6_age INTEGER NOT NULL,
+  racer6_branch TEXT NOT NULL,
+  racer6_weight REAL NOT NULL,
+  racer6_class TEXT NOT NULL,
+  racer6_national_win_rate REAL NOT NULL,
+  racer6_national_quinella_rate REAL NOT NULL,
+  racer6_local_win_rate REAL NOT NULL,
+  racer6_local_quinella_rate REAL NOT NULL,
+  racer6_motor_number INTEGER NOT NULL,
+  racer6_motor_quinella_rate REAL NOT NULL,
+  racer6_boat_number INTEGER NOT NULL,
+  racer6_boat_quinella_rate REAL NOT NULL,
+  
+  -- インデックス用の複合キー
+  UNIQUE(year, month, day, venue_code, race_number)
+);
+
+-- インデックスの作成
+CREATE INDEX idx_programs_date ON programs(year, month, day);
+CREATE INDEX idx_programs_venue ON programs(venue_code);
+CREATE INDEX idx_programs_race ON programs(race_number);
+CREATE INDEX idx_programs_racer1 ON programs(racer1_number);
+CREATE INDEX idx_programs_racer2 ON programs(racer2_number);
+CREATE INDEX idx_programs_racer3 ON programs(racer3_number);
+CREATE INDEX idx_programs_racer4 ON programs(racer4_number);
+CREATE INDEX idx_programs_racer5 ON programs(racer5_number);
+CREATE INDEX idx_programs_racer6 ON programs(racer6_number);
