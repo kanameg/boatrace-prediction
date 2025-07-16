@@ -73,7 +73,7 @@ def load_racer_data():
 
 
 def convert_race_programs():
-    """race_programs.csvを読み込み、各枠ごとに1行に変換し、着順情報とコース別複勝率を追加してracer_program.csvに保存"""
+    """programs.csvを読み込み、各枠ごとに1行に変換し、着順情報とコース別複勝率を追加してracer_program.csvに保存"""
 
     # 着順情報を読み込み
     ranking_dict = load_race_results()
@@ -82,8 +82,8 @@ def convert_race_programs():
     racer_dict = load_racer_data()
 
     # データを読み込み
-    print("race_programs.csvを読み込み中...")
-    df = pd.read_csv("/app/data/race_programs.csv")
+    print("programs.csvを読み込み中...")
+    df = pd.read_csv("/app/data/programs.csv")
 
     # 変換後のデータを格納するリスト
     converted_rows = []

@@ -232,7 +232,7 @@ def check_race_count(csv_file: str, show_all: bool = False) -> None:
 
 def main():
     """メイン関数"""
-    csv_file = "data/race_programs.csv"
+    csv_file = "data/programs.csv"
     show_all = False
 
     # コマンドライン引数の解析
@@ -245,9 +245,7 @@ def main():
 
     if "--help" in sys.argv or "-h" in sys.argv:
         print("使用方法: python check_race_count.py [ファイル名] [--all]")
-        print(
-            "  ファイル名: チェックするCSVファイル（デフォルト: data/race_programs.csv）"
-        )
+        print("  ファイル名: チェックするCSVファイル（デフォルト: data/programs.csv）")
         print("  --all: 全てのデータを表示（デフォルト: 不完全なデータのみ表示）")
         return
 

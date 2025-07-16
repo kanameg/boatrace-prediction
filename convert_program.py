@@ -245,7 +245,7 @@ class ProgramConverter:
         # ファイル名生成
         year_short = year % 100
         input_file = f"data/raw/programs/b{year_short:02d}{month:02d}{day:02d}_u8.txt"
-        output_file = "data/race_programs.csv"
+        output_file = "data/programs.csv"
 
         if not os.path.exists(input_file):
             print(f"エラー: 入力ファイルが見つかりません: {input_file}")
