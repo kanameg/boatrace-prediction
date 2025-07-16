@@ -19,6 +19,7 @@ ENV TZ=Asia/Tokyo
 RUN apt-get update && apt-get install -y \
     fonts-ipaexfont \
     libopencv-dev \
+    sqlite3 \
     lhasa \
     wget \
     fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
