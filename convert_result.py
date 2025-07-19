@@ -44,7 +44,7 @@ class ResultConverter:
             "大村": "24",
         }
 
-        # 出力CSVのヘッダー
+        # 出力CSVのヘッダー（1行1選手形式）
         self.csv_headers = [
             "年",
             "月",
@@ -83,24 +83,16 @@ class ResultConverter:
             "3連複_艇番",
             "3連複_払戻金",
             "3連複_人気",
+            "着順",
+            "選手登番",
+            "艇番",
+            "モーター番号",
+            "ボート番号",
+            "展示",
+            "進入",
+            "スタートタイミング",
+            "レースタイム",
         ]
-
-        # 6艇分のレース結果カラムを追加
-        for i in range(1, 7):
-            boat_prefix = f"{i}艇_"
-            self.csv_headers.extend(
-                [
-                    f"{boat_prefix}着順",
-                    f"{boat_prefix}選手登番",
-                    f"{boat_prefix}艇番",
-                    f"{boat_prefix}モーター番号",
-                    f"{boat_prefix}ボート番号",
-                    f"{boat_prefix}展示",
-                    f"{boat_prefix}進入",
-                    f"{boat_prefix}スタートタイミング",
-                    f"{boat_prefix}レースタイム",
-                ]
-            )
 
     def extract_track_number(self, text: str) -> Optional[str]:
         """レース場名からレース場番号を抽出"""
@@ -655,9 +647,10 @@ class ResultConverter:
                 if not file_exists:
                     writer.writerow(self.csv_headers)
 
-                # データを書き込み
+                # データを書き込み（1行1選手形式）
                 for race in races:
-                    row = [
+                    # レース基本情報
+                    race_base_info = [
                         race["year"],
                         race["month"],
                         race["day"],
@@ -670,89 +663,76 @@ class ResultConverter:
                         race["wave_height"],
                     ]
 
-                    # 賭け式結果を追加
+                    # 賭け式結果情報
                     betting = race["betting_results"]
 
                     # 単勝
                     single_win = betting.get("単勝", {})
-                    row.extend(
-                        [single_win.get("艇番", ""), single_win.get("払戻金", "")]
-                    )
+                    betting_info = [
+                        single_win.get("艇番", ""),
+                        single_win.get("払戻金", ""),
+                    ]
 
                     # 複勝
                     place1 = betting.get("複勝1着", {})
                     place2 = betting.get("複勝2着", {})
-                    row.extend(
-                        [
-                            place1.get("艇番", ""),
-                            place1.get("払戻金", ""),
-                            place2.get("艇番", ""),
-                            place2.get("払戻金", ""),
-                        ]
-                    )
+                    betting_info.extend([
+                        place1.get("艇番", ""),
+                        place1.get("払戻金", ""),
+                        place2.get("艇番", ""),
+                        place2.get("払戻金", ""),
+                    ])
 
                     # 2連単
                     exacta = betting.get("2連単", {})
-                    row.extend(
-                        [
-                            exacta.get("艇番", ""),
-                            exacta.get("払戻金", ""),
-                            exacta.get("人気", ""),
-                        ]
-                    )
+                    betting_info.extend([
+                        exacta.get("艇番", ""),
+                        exacta.get("払戻金", ""),
+                        exacta.get("人気", ""),
+                    ])
 
                     # 2連複
                     quinella = betting.get("2連複", {})
-                    row.extend(
-                        [
-                            quinella.get("艇番", ""),
-                            quinella.get("払戻金", ""),
-                            quinella.get("人気", ""),
-                        ]
-                    )
+                    betting_info.extend([
+                        quinella.get("艇番", ""),
+                        quinella.get("払戻金", ""),
+                        quinella.get("人気", ""),
+                    ])
 
                     # 拡連複
                     wide1 = betting.get("拡連複1", {})
                     wide2 = betting.get("拡連複2", {})
                     wide3 = betting.get("拡連複3", {})
-                    row.extend(
-                        [
-                            wide1.get("艇番", ""),
-                            wide1.get("払戻金", ""),
-                            wide1.get("人気", ""),
-                            wide2.get("艇番", ""),
-                            wide2.get("払戻金", ""),
-                            wide2.get("人気", ""),
-                            wide3.get("艇番", ""),
-                            wide3.get("払戻金", ""),
-                            wide3.get("人気", ""),
-                        ]
-                    )
+                    betting_info.extend([
+                        wide1.get("艇番", ""),
+                        wide1.get("払戻金", ""),
+                        wide1.get("人気", ""),
+                        wide2.get("艇番", ""),
+                        wide2.get("払戻金", ""),
+                        wide2.get("人気", ""),
+                        wide3.get("艇番", ""),
+                        wide3.get("払戻金", ""),
+                        wide3.get("人気", ""),
+                    ])
 
                     # 3連単
                     trifecta = betting.get("3連単", {})
-                    row.extend(
-                        [
-                            trifecta.get("艇番", ""),
-                            trifecta.get("払戻金", ""),
-                            trifecta.get("人気", ""),
-                        ]
-                    )
+                    betting_info.extend([
+                        trifecta.get("艇番", ""),
+                        trifecta.get("払戻金", ""),
+                        trifecta.get("人気", ""),
+                    ])
 
                     # 3連複
                     trio = betting.get("3連複", {})
-                    row.extend(
-                        [
-                            trio.get("艇番", ""),
-                            trio.get("払戻金", ""),
-                            trio.get("人気", ""),
-                        ]
-                    )
+                    betting_info.extend([
+                        trio.get("艇番", ""),
+                        trio.get("払戻金", ""),
+                        trio.get("人気", ""),
+                    ])
 
-                    # 6艇分のレース結果を追加（艇番順）
+                    # 全選手の結果を収集
                     finish_order = ["01", "02", "03", "04", "05", "06"]
-
-                    # 全ての結果を収集
                     all_race_results = []
 
                     # 着順者を収集
@@ -769,12 +749,10 @@ class ResultConverter:
                     # 艇番順でソート
                     all_race_results.sort(key=lambda x: int(x.get("boat_number", "0")))
 
-                    # 6艇まで分の結果を出力（不足分は空で埋める）
-                    for i in range(6):
-                        if i < len(all_race_results):
-                            result = all_race_results[i]
-                        else:
-                            result = {}
+                    # 各選手について1行ずつ出力
+                    for result in all_race_results:
+                        # レース基本情報と賭け式情報をコピー
+                        row = race_base_info + betting_info
 
                         # 着順の先頭0を除去（01→1, 02→2, ...）
                         finish_pos = result.get("finish_position", "")
@@ -785,23 +763,25 @@ class ResultConverter:
                         ):
                             finish_pos = finish_pos[1:]
 
-                        row.extend(
-                            [
-                                finish_pos,
-                                result.get("player_id", ""),
-                                result.get("boat_number", ""),
-                                result.get("motor_number", ""),
-                                result.get("boat_number_actual", ""),
-                                result.get("exhibition_time", ""),
-                                result.get("approach_course", ""),
-                                result.get("start_timing", ""),
-                                result.get("race_time", ""),
-                            ]
-                        )
+                        # 選手個別情報を追加
+                        row.extend([
+                            finish_pos,
+                            result.get("player_id", ""),
+                            result.get("boat_number", ""),
+                            result.get("motor_number", ""),
+                            result.get("boat_number_actual", ""),
+                            result.get("exhibition_time", ""),
+                            result.get("approach_course", ""),
+                            result.get("start_timing", ""),
+                            result.get("race_time", ""),
+                        ])
 
-                    writer.writerow(row)
+                        writer.writerow(row)
 
-            print(f"処理完了: {len(races)}レースのデータを変換しました")
+            # 選手数をカウント
+            total_players = sum(len(race["race_results"]) for race in races)
+            
+            print(f"処理完了: {len(races)}レース、{total_players}選手のデータを変換しました")
             print(f"出力ファイル: {output_file}")
             return 0
 
