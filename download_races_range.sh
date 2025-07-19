@@ -6,7 +6,7 @@
 # 期間は開始日と終了日で指定します。
 # ダウンロードには、download_race.shスクリプトを使用します。
 #
-# 使用方法: ./download_races_range.sh [p|r] START_YYYY START_MM START_DD END_YYYY END_MM END_DD
+# 使用方法: ./download_races_range.sh [p|r] START_DATE END_DATE
 #
 
 # エラー処理を有効にする
@@ -20,60 +20,44 @@ error_exit() {
 
 # 関数: 使用方法を表示
 show_usage() {
-    echo "使用方法: $0 [p|r] START_YYYY START_MM START_DD END_YYYY END_MM END_DD"
+    echo "使用方法: $0 [p|r] START_DATE END_DATE"
     echo "  p: 番組表をダウンロード"
     echo "  r: 競走成績をダウンロード"
-    echo "  START_YYYY: 開始年4桁（例: 2025）"
-    echo "  START_MM: 開始月1桁または2桁（例: 7 または 07）"
-    echo "  START_DD: 開始日1桁または2桁（例: 1 または 01）"
-    echo "  END_YYYY: 終了年4桁（例: 2025）"
-    echo "  END_MM: 終了月1桁または2桁（例: 7 または 07）"
-    echo "  END_DD: 終了日1桁または2桁（例: 9 または 09）"
+    echo "  START_DATE: 開始日（YYYY-MM-DD形式、例: 2025-07-01 または 2025-7-1）"
+    echo "  END_DATE: 終了日（YYYY-MM-DD形式、例: 2025-07-09 または 2025-7-9）"
     echo ""
-    echo "例: $0 r 2025 7 1 2025 7 9  # 2025年7月1日から9日まで競走成績をダウンロード"
-    echo "例: $0 p 2025 7 1 2025 7 9  # 2025年7月1日から9日まで番組表をダウンロード"
+    echo "例: $0 r 2025-07-01 2025-07-09  # 2025年7月1日から9日まで競走成績をダウンロード"
+    echo "例: $0 p 2025-7-1 2025-7-9      # 2025年7月1日から9日まで番組表をダウンロード"
     exit 1
 }
 
 # 関数: 日付を検証
 validate_date() {
-    local year=$1
-    local month=$2
-    local day=$3
-    local label=$4
+    local date_str=$1
+    local label=$2
     
-    if ! [[ "$year" =~ ^[0-9]{4}$ ]]; then
-        error_exit "${label}年は4桁の数値で入力してください: $year"
+    # 日付形式のチェック（YYYY-MM-DD または YYYY-M-D）
+    if ! [[ "$date_str" =~ ^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}$ ]]; then
+        error_exit "${label}日付はYYYY-MM-DD形式で入力してください（0埋めなしも可）: $date_str"
     fi
     
-    if ! [[ "$month" =~ ^[0-9]{1,2}$ ]] || [ "$month" -lt 1 ] || [ "$month" -gt 12 ]; then
-        error_exit "${label}月は1〜12の範囲で入力してください: $month"
-    fi
-    
-    if ! [[ "$day" =~ ^[0-9]{1,2}$ ]] || [ "$day" -lt 1 ] || [ "$day" -gt 31 ]; then
-        error_exit "${label}日は1〜31の範囲で入力してください: $day"
+    # 日付の妥当性チェック
+    if ! date -d "$date_str" > /dev/null 2>&1; then
+        error_exit "無効な${label}日付です: $date_str"
     fi
 }
 
 # 関数: 日付をエポック秒に変換
 date_to_epoch() {
-    local year=$1
-    local month=$2
-    local day=$3
+    local date_str=$1
     
-    date -d "${year}-${month}-${day}" +%s 2>/dev/null || error_exit "無効な日付です: ${year}-${month}-${day}"
+    date -d "$date_str" +%s 2>/dev/null || error_exit "無効な日付です: $date_str"
 }
 
 # 関数: エポック秒を次の日に進める
 next_day() {
     local epoch=$1
     echo $((epoch + 86400))  # 86400秒 = 24時間
-}
-
-# 関数: エポック秒を年月日に変換
-epoch_to_date() {
-    local epoch=$1
-    date -d "@${epoch}" "+%Y %m %d"
 }
 
 # download_race.shの存在確認
@@ -86,18 +70,14 @@ if [ ! -x "./download_race.sh" ]; then
 fi
 
 # 引数チェック
-if [ $# -ne 7 ]; then
+if [ $# -ne 3 ]; then
     echo "エラー: 引数が不足しています。"
     show_usage
 fi
 
 TYPE=$1
-START_YEAR=$2
-START_MONTH=$3
-START_DAY=$4
-END_YEAR=$5
-END_MONTH=$6
-END_DAY=$7
+START_DATE=$2
+END_DATE=$3
 
 # タイプの妥当性チェック
 if [[ "$TYPE" != "p" && "$TYPE" != "r" ]]; then
@@ -112,19 +92,19 @@ else
 fi
 
 # 引数の妥当性チェック
-validate_date "$START_YEAR" "$START_MONTH" "$START_DAY" "開始"
-validate_date "$END_YEAR" "$END_MONTH" "$END_DAY" "終了"
+validate_date "$START_DATE" "開始"
+validate_date "$END_DATE" "終了"
 
 # 日付の前後関係チェック
-START_EPOCH=$(date_to_epoch "$START_YEAR" "$START_MONTH" "$START_DAY")
-END_EPOCH=$(date_to_epoch "$END_YEAR" "$END_MONTH" "$END_DAY")
+START_EPOCH=$(date_to_epoch "$START_DATE")
+END_EPOCH=$(date_to_epoch "$END_DATE")
 
 if [ "$START_EPOCH" -gt "$END_EPOCH" ]; then
-    error_exit "開始日が終了日より後になっています: ${START_YEAR}-${START_MONTH}-${START_DAY} > ${END_YEAR}-${END_MONTH}-${END_DAY}"
+    error_exit "開始日が終了日より後になっています: $START_DATE > $END_DATE"
 fi
 
 echo "複数${TYPE_NAME}ダウンロード開始"
-echo "期間: ${START_YEAR}年${START_MONTH}月${START_DAY}日 〜 ${END_YEAR}年${END_MONTH}月${END_DAY}日"
+echo "期間: $START_DATE 〜 $END_DATE"
 
 # 処理する日数を計算
 TOTAL_DAYS=$(( (END_EPOCH - START_EPOCH) / 86400 + 1 ))
@@ -140,16 +120,13 @@ CURRENT_DAY=1
 # ダウンロードは、サーバーに負荷をかけないように、1日ごとに行い、ダウンロードの間隔は1秒とする
 CURRENT_EPOCH=$START_EPOCH
 while [ "$CURRENT_EPOCH" -le "$END_EPOCH" ]; do
-    # エポック秒を年月日に変換
-    DATE_INFO=($(epoch_to_date $CURRENT_EPOCH))
-    YEAR=${DATE_INFO[0]}
-    MONTH=$((10#${DATE_INFO[1]}))  # 先頭の0を除去
-    DAY=$((10#${DATE_INFO[2]}))    # 先頭の0を除去
+    # エポック秒を日付文字列に変換
+    CURRENT_DATE=$(date -d "@$CURRENT_EPOCH" +%Y-%m-%d)
     
-    echo "[${CURRENT_DAY}/${TOTAL_DAYS}] ${YEAR}年${MONTH}月${DAY}日の処理中..."
+    echo "[${CURRENT_DAY}/${TOTAL_DAYS}] $CURRENT_DATE の処理中..."
     
-    # download_race.shを実行して出力をキャプチャ
-    DOWNLOAD_OUTPUT=$(./download_race.sh "$TYPE" "$YEAR" "$MONTH" "$DAY" 2>&1)
+    # download_race.shを実行して出力をキャプチャ（YYYY-MM-DD形式で渡す）
+    DOWNLOAD_OUTPUT=$(./download_race.sh "$TYPE" "$CURRENT_DATE" 2>&1)
     DOWNLOAD_RESULT=$?
     
     if [ $DOWNLOAD_RESULT -eq 0 ]; then
@@ -163,10 +140,10 @@ while [ "$CURRENT_EPOCH" -le "$END_EPOCH" ]; do
         fi
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
     else
-        echo "  → エラー: ${YEAR}年${MONTH}月${DAY}日のダウンロードに失敗しました"
+        echo "  → エラー: $CURRENT_DATE のダウンロードに失敗しました"
         echo "$DOWNLOAD_OUTPUT"
         ERROR_COUNT=$((ERROR_COUNT + 1))
-        error_exit "各日付のダウンロードに失敗しました: ${YEAR}年${MONTH}月${DAY}日"
+        error_exit "各日付のダウンロードに失敗しました: $CURRENT_DATE"
     fi
     
     # 次の日に進む
