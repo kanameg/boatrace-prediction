@@ -444,6 +444,15 @@ def convert_nengou(nengou):
     return nengou
 
 
+def convert_period(period):
+    """期変換（e=0前期, l=1後期）"""
+    if period == "e":
+        return 0
+    elif period == "l":
+        return 1
+    return period
+
+
 def format_date(date_str, nengou):
     """生年月日フォーマット（年号付き）"""
     if not date_str or len(date_str) != 6:
@@ -497,9 +506,11 @@ def parse_racer_data(file_path):
     return results
 
 
-def write_csv(results, output_file):
+def write_csv(results, output_file, year, period):
     """結果をCSVファイルに出力"""
     headers = [
+        "年",
+        "期",
         "登番",
         "名前漢字",
         "名前カナ",
@@ -645,15 +656,90 @@ def write_csv(results, output_file):
         "出身地",
     ]
 
-    with open(output_file, "w", newline="", encoding="utf-8") as f:
+    # ファイルが存在するかチェック
+    file_exists = os.path.exists(output_file)
+
+    # 既存データを読み込んで重複チェック用のセットを作成
+    existing_keys = set()
+    if file_exists:
+        try:
+            with open(output_file, "r", newline="", encoding="utf-8") as f:
+                reader = csv.reader(f)
+                next(reader, None)  # ヘッダーをスキップ
+                for row in reader:
+                    if len(row) >= 3:  # 年、期、登番が存在する場合
+                        key = (row[0], row[1], row[2])  # 年、期、登番をキーとする
+                        existing_keys.add(key)
+        except Exception as e:
+            print(f"警告: 既存ファイルの読み込み中にエラーが発生しました: {e}")
+
+    with open(output_file, "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
 
-        # ヘッダーを書き込み
-        writer.writerow(headers)
+        # ヘッダーを書き込み（ファイルが存在しない場合のみ）
+        if not file_exists:
+            writer.writerow(headers)
 
-        # データを書き込み
+        # データを書き込み（重複チェック付き）
+        period_num = convert_period(period)
+        new_rows_count = 0
+        duplicate_count = 0
+
         for row in results:
-            writer.writerow(row)
+            # 年と期を先頭に追加（期はe=0前期, l=1後期に変換）
+            new_row = [year, period_num] + row
+            key = (str(year), str(period_num), str(row[0]))  # 年、期、登番をキーとする
+
+            # 重複チェック
+            if key not in existing_keys:
+                writer.writerow(new_row)
+                existing_keys.add(key)  # 今回追加したデータも重複チェック対象に追加
+                new_rows_count += 1
+            else:
+                duplicate_count += 1
+
+        if duplicate_count > 0:
+            print(f"重複データ {duplicate_count}件をスキップしました")
+        print(f"新規データ {new_rows_count}件を追加しました")
+
+
+def sort_csv_file(file_path):
+    """CSVファイルを年、期、登番でソートする"""
+    try:
+        # CSVファイルを読み込み
+        with open(file_path, "r", newline="", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+
+        if len(rows) <= 1:  # ヘッダーのみまたは空の場合
+            return
+
+        # ヘッダーと データを分離
+        header = rows[0]
+        data_rows = rows[1:]
+
+        # データをソート（年、期、登番の順）
+        # 年は数値、期は0/1、登番は数値でソート
+        def sort_key(row):
+            try:
+                year = int(row[0])  # 年
+                period = int(row[1])  # 期（0=前期, 1=後期）
+                touban = int(row[2])  # 登番
+                return (year, period, touban)
+            except (ValueError, IndexError):
+                # エラーの場合は末尾に配置
+                return (9999, 9999, 9999)
+
+        sorted_data = sorted(data_rows, key=sort_key)
+
+        # ソート済みデータを書き戻し
+        with open(file_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(header)  # ヘッダーを書き込み
+            writer.writerows(sorted_data)  # ソート済みデータを書き込み
+
+    except Exception as e:
+        print(f"警告: ソート処理中にエラーが発生しました: {e}")
 
 
 def convert_fullwidth_spaces_in_name(text):
@@ -691,8 +777,8 @@ def convert_halfwidth_kana_to_fullwidth(text):
 def main():
     """メイン関数"""
     if len(sys.argv) != 3:
-        print("使用方法: python convert_racer_record.py <期> <年>")
-        print("例: python convert_racer_record.py e 2025")
+        print("使用方法: python convert_racer.py <期> <年>")
+        print("例: python convert_racer.py e 2025")
         print("  e: 前期, l: 後期")
         sys.exit(1)
 
@@ -715,7 +801,7 @@ def main():
 
     # 入力ファイル名を生成
     input_filename = f"racer_{year}{period}.txt"
-    input_path = os.path.join("data", "raw", "racer_records", input_filename)
+    input_path = os.path.join("data", "raw", "racer", input_filename)
 
     # ファイルの存在確認
     if not os.path.exists(input_path):
@@ -731,17 +817,19 @@ def main():
         print("エラー: データが見つかりませんでした")
         sys.exit(1)
 
-    # 出力ファイル名を生成
-    output_filename = f"racer_{year}{period}.csv"
-    output_path = os.path.join("data", output_filename)
+    # 出力ファイル名を生成（統一ファイル）
+    output_path = os.path.join("data", "racer.csv")
 
     # 出力ディレクトリの作成
     os.makedirs("data", exist_ok=True)
 
     # CSVファイルに出力
-    write_csv(results, output_path)
+    write_csv(results, output_path, year, period)
 
-    print(f"変換完了: {len(results)}件のデータを {output_path} に出力しました")
+    # データを年、期、登番でソートする
+    sort_csv_file(output_path)
+
+    print(f"変換完了: 処理対象 {len(results)}件のデータを {output_path} に処理しました")
 
 
 if __name__ == "__main__":
