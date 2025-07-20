@@ -445,7 +445,7 @@ def convert_nengou(nengou):
 
 
 def convert_period(period):
-    """期変換（e=0, l=1）"""
+    """期変換（e=0前期, l=1後期）"""
     if period == "e":
         return 0
     elif period == "l":
@@ -659,6 +659,20 @@ def write_csv(results, output_file, year, period):
     # ファイルが存在するかチェック
     file_exists = os.path.exists(output_file)
 
+    # 既存データを読み込んで重複チェック用のセットを作成
+    existing_keys = set()
+    if file_exists:
+        try:
+            with open(output_file, "r", newline="", encoding="utf-8") as f:
+                reader = csv.reader(f)
+                next(reader, None)  # ヘッダーをスキップ
+                for row in reader:
+                    if len(row) >= 3:  # 年、期、登番が存在する場合
+                        key = (row[0], row[1], row[2])  # 年、期、登番をキーとする
+                        existing_keys.add(key)
+        except Exception as e:
+            print(f"警告: 既存ファイルの読み込み中にエラーが発生しました: {e}")
+
     with open(output_file, "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
 
@@ -666,12 +680,27 @@ def write_csv(results, output_file, year, period):
         if not file_exists:
             writer.writerow(headers)
 
-        # データを書き込み
+        # データを書き込み（重複チェック付き）
+        period_num = convert_period(period)
+        new_rows_count = 0
+        duplicate_count = 0
+
         for row in results:
-            # 年と期を先頭に追加（期はe=0, l=1に変換）
-            period_num = convert_period(period)
+            # 年と期を先頭に追加（期はe=0前期, l=1後期に変換）
             new_row = [year, period_num] + row
-            writer.writerow(new_row)
+            key = (str(year), str(period_num), str(row[0]))  # 年、期、登番をキーとする
+
+            # 重複チェック
+            if key not in existing_keys:
+                writer.writerow(new_row)
+                existing_keys.add(key)  # 今回追加したデータも重複チェック対象に追加
+                new_rows_count += 1
+            else:
+                duplicate_count += 1
+
+        if duplicate_count > 0:
+            print(f"重複データ {duplicate_count}件をスキップしました")
+        print(f"新規データ {new_rows_count}件を追加しました")
 
 
 def sort_csv_file(file_path):
@@ -748,8 +777,8 @@ def convert_halfwidth_kana_to_fullwidth(text):
 def main():
     """メイン関数"""
     if len(sys.argv) != 3:
-        print("使用方法: python convert_racer_record.py <期> <年>")
-        print("例: python convert_racer_record.py e 2025")
+        print("使用方法: python convert_racer.py <期> <年>")
+        print("例: python convert_racer.py e 2025")
         print("  e: 前期, l: 後期")
         sys.exit(1)
 
@@ -800,7 +829,7 @@ def main():
     # データを年、期、登番でソートする
     sort_csv_file(output_path)
 
-    print(f"変換完了: {len(results)}件のデータを {output_path} に出力しました")
+    print(f"変換完了: 処理対象 {len(results)}件のデータを {output_path} に処理しました")
 
 
 if __name__ == "__main__":

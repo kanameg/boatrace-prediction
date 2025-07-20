@@ -56,13 +56,12 @@ fi
 
 # ファイル名とパス生成
 INPUT_FILENAME="racer_${YEAR_FULL}${PERIOD}.txt"
-OUTPUT_FILENAME="racer_${YEAR_FULL}${PERIOD}.csv"
 INPUT_PATH="data/raw/racer/${INPUT_FILENAME}"
-OUTPUT_PATH="data/${OUTPUT_FILENAME}"
+OUTPUT_PATH="data/racer.csv"
 
 echo "処理開始: ${YEAR_FULL}年${PERIOD_NAME}のレーサー期別成績データを変換します"
 echo "入力ファイル: ${INPUT_PATH}"
-echo "出力ファイル: ${OUTPUT_PATH}"
+echo "出力ファイル: ${OUTPUT_PATH} (統一ファイルに追記)"
 
 # 入力ファイルの存在確認
 if [ ! -f "$INPUT_PATH" ]; then
@@ -83,8 +82,8 @@ echo "出力ファイル: $OUTPUT_PATH"
 
 # 出力ファイルの確認
 if [ -f "$OUTPUT_PATH" ]; then
-    echo "CSVファイルが正常に作成されました"
-    echo "レコード数: $(tail -n +2 "$OUTPUT_PATH" | wc -l) 件"
+    echo "統一CSVファイルに正常に追記されました"
+    echo "総レコード数: $(tail -n +2 "$OUTPUT_PATH" | wc -l) 件"
 else
     error_exit "出力ファイルが作成されませんでした"
 fi
