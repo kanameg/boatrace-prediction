@@ -1,36 +1,58 @@
 #!/bin/bash
-# 増分でresults.csvをインポートするスクリプト
 
-DB_FILE="boat_race.db"
-CSV_FILE="../data/results.csv"
+# レース結果データ増分インポートスクリプト
+# data/results.csvから新規データのみをSQLite3データベースに追加する
 
-echo "=== Results 増分インポートスクリプト ==="
+set -e
 
-# 現在のデータベースの最新日付を取得
-LATEST_DATE=$(sqlite3 "$DB_FILE" "SELECT MAX(year || '-' || printf('%02d', month) || '-' || printf('%02d', day)) FROM results;" 2>/dev/null)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CSV_FILE="${SCRIPT_DIR}/../data/results.csv"
+DB_FILE="${SCRIPT_DIR}/boat_race.db"
 
-if [ -z "$LATEST_DATE" ]; then
-    echo "データベースが空です。完全インポートを実行してください。"
+echo "=== レース結果データ増分インポート開始 ==="
+
+# CSVファイルの存在確認
+if [ ! -f "$CSV_FILE" ]; then
+    echo "エラー: $CSV_FILE が見つかりません"
     exit 1
 fi
 
-echo "データベース内の最新日付: $LATEST_DATE"
+# データベースファイルの存在確認
+if [ ! -f "$DB_FILE" ]; then
+    echo "エラー: データベース $DB_FILE が見つかりません"
+    echo "先に import_results.sh を実行してください"
+    exit 1
+fi
 
-# 一時テーブルを作成してCSVをインポート
+echo "CSVファイル: $CSV_FILE"
+echo "データベース: $DB_FILE"
+
+# CSVの行数を確認
+CSV_LINES=$(wc -l < "$CSV_FILE")
+echo "CSVファイル行数: $CSV_LINES 行（ヘッダー含む）"
+
+# 現在のデータベース件数を確認
+CURRENT_COUNT=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM results;")
+echo "現在のDB件数: $CURRENT_COUNT 件"
+
+# 増分インポート実行
+echo ""
+echo "増分インポートを実行中..."
+
 sqlite3 "$DB_FILE" <<EOF
 -- 一時テーブル作成
-DROP TABLE IF EXISTS temp_new_results;
-CREATE TABLE temp_new_results (
-  年 TEXT,
-  月 TEXT,
-  日 TEXT,
-  レース場番号 TEXT,
-  レース番号 TEXT,
-  距離 TEXT,
+DROP TABLE IF EXISTS temp_results_incremental;
+CREATE TABLE temp_results_incremental (
+  年 INTEGER,
+  月 INTEGER,
+  日 INTEGER,
+  レース場番号 INTEGER,
+  レース番号 INTEGER,
+  距離 INTEGER,
   天候 TEXT,
   風向 TEXT,
-  風速 TEXT,
-  波高 TEXT,
+  風速 REAL,
+  波高 REAL,
   単勝_艇番 TEXT,
   単勝_払戻金 TEXT,
   複勝1着_艇番 TEXT,
@@ -58,70 +80,29 @@ CREATE TABLE temp_new_results (
   '3連複_艇番' TEXT,
   '3連複_払戻金' TEXT,
   '3連複_人気' TEXT,
-  '1艇_着順' TEXT,
-  '1艇_選手登番' TEXT,
-  '1艇_艇番' TEXT,
-  '1艇_モーター番号' TEXT,
-  '1艇_ボート番号' TEXT,
-  '1艇_展示' TEXT,
-  '1艇_進入' TEXT,
-  '1艇_スタートタイミング' TEXT,
-  '1艇_レースタイム' TEXT,
-  '2艇_着順' TEXT,
-  '2艇_選手登番' TEXT,
-  '2艇_艇番' TEXT,
-  '2艇_モーター番号' TEXT,
-  '2艇_ボート番号' TEXT,
-  '2艇_展示' TEXT,
-  '2艇_進入' TEXT,
-  '2艇_スタートタイミング' TEXT,
-  '2艇_レースタイム' TEXT,
-  '3艇_着順' TEXT,
-  '3艇_選手登番' TEXT,
-  '3艇_艇番' TEXT,
-  '3艇_モーター番号' TEXT,
-  '3艇_ボート番号' TEXT,
-  '3艇_展示' TEXT,
-  '3艇_進入' TEXT,
-  '3艇_スタートタイミング' TEXT,
-  '3艇_レースタイム' TEXT,
-  '4艇_着順' TEXT,
-  '4艇_選手登番' TEXT,
-  '4艇_艇番' TEXT,
-  '4艇_モーター番号' TEXT,
-  '4艇_ボート番号' TEXT,
-  '4艇_展示' TEXT,
-  '4艇_進入' TEXT,
-  '4艇_スタートタイミング' TEXT,
-  '4艇_レースタイム' TEXT,
-  '5艇_着順' TEXT,
-  '5艇_選手登番' TEXT,
-  '5艇_艇番' TEXT,
-  '5艇_モーター番号' TEXT,
-  '5艇_ボート番号' TEXT,
-  '5艇_展示' TEXT,
-  '5艇_進入' TEXT,
-  '5艇_スタートタイミング' TEXT,
-  '5艇_レースタイム' TEXT,
-  '6艇_着順' TEXT,
-  '6艇_選手登番' TEXT,
-  '6艇_艇番' TEXT,
-  '6艇_モーター番号' TEXT,
-  '6艇_ボート番号' TEXT,
-  '6艇_展示' TEXT,
-  '6艇_進入' TEXT,
-  '6艇_スタートタイミング' TEXT,
-  '6艇_レースタイム' TEXT
+  着順 TEXT,
+  選手登番 TEXT,
+  艇番 TEXT,
+  モーター番号 TEXT,
+  ボート番号 TEXT,
+  展示 TEXT,
+  進入 TEXT,
+  スタートタイミング TEXT,
+  レースタイム TEXT
 );
 
+-- CSVファイルをインポート
 .mode csv
-.headers off
-.import $CSV_FILE temp_new_results
+.headers on
+.import '$CSV_FILE' temp_results_incremental
 
--- 新しいデータのみを抽出して追加
+-- 新規データのみを抽出して本テーブルに挿入
 INSERT OR IGNORE INTO results (
-  year, month, day, venue_code, race_number, distance, weather, wind_direction, wind_speed, wave_height,
-  win_boat_number, win_payout, place_1st_boat_number, place_1st_payout, place_2nd_boat_number, place_2nd_payout,
+  year, month, day, venue_code, race_number,
+  distance, weather, wind_direction, wind_speed, wave_height,
+  win_boat_number, win_payout,
+  place_1st_boat_number, place_1st_payout,
+  place_2nd_boat_number, place_2nd_payout,
   exacta_boat_numbers, exacta_payout, exacta_popularity,
   quinella_boat_numbers, quinella_payout, quinella_popularity,
   wide_1_boat_numbers, wide_1_payout, wide_1_popularity,
@@ -129,113 +110,114 @@ INSERT OR IGNORE INTO results (
   wide_3_boat_numbers, wide_3_payout, wide_3_popularity,
   trifecta_boat_numbers, trifecta_payout, trifecta_popularity,
   trio_boat_numbers, trio_payout, trio_popularity,
-  racer1_finish_position, racer1_number, racer1_boat_number, racer1_motor_number, racer1_boat_number_assigned,
-  racer1_exhibition_time, racer1_start_course, racer1_start_timing, racer1_race_time,
-  racer2_finish_position, racer2_number, racer2_boat_number, racer2_motor_number, racer2_boat_number_assigned,
-  racer2_exhibition_time, racer2_start_course, racer2_start_timing, racer2_race_time,
-  racer3_finish_position, racer3_number, racer3_boat_number, racer3_motor_number, racer3_boat_number_assigned,
-  racer3_exhibition_time, racer3_start_course, racer3_start_timing, racer3_race_time,
-  racer4_finish_position, racer4_number, racer4_boat_number, racer4_motor_number, racer4_boat_number_assigned,
-  racer4_exhibition_time, racer4_start_course, racer4_start_timing, racer4_race_time,
-  racer5_finish_position, racer5_number, racer5_boat_number, racer5_motor_number, racer5_boat_number_assigned,
-  racer5_exhibition_time, racer5_start_course, racer5_start_timing, racer5_race_time,
-  racer6_finish_position, racer6_number, racer6_boat_number, racer6_motor_number, racer6_boat_number_assigned,
-  racer6_exhibition_time, racer6_start_course, racer6_start_timing, racer6_race_time
+  finish_position, racer_number, boat_number, motor_number, boat_number_assigned,
+  exhibition_time, start_course, start_timing, race_time
 )
 SELECT 
-  CAST(年 AS INTEGER), CAST(月 AS INTEGER), CAST(日 AS INTEGER),
-  CAST(レース場番号 AS INTEGER), CAST(レース番号 AS INTEGER),
-  CAST(距離 AS INTEGER), 天候, 風向, CAST(風速 AS REAL), CAST(波高 AS REAL),
-  CASE WHEN 単勝_艇番 = '' OR 単勝_艇番 IS NULL THEN NULL ELSE CAST(単勝_艇番 AS INTEGER) END,
+  年, 月, 日, レース場番号, レース番号,
+  距離, 天候, 風向, 風速, 波高,
+  
+  -- 払戻金情報の変換
+  CASE WHEN 単勝_艇番 = '' OR 単勝_艇番 IS NULL THEN NULL ELSE 単勝_艇番 END,
   CASE WHEN 単勝_払戻金 = '' OR 単勝_払戻金 IS NULL THEN NULL ELSE CAST(単勝_払戻金 AS INTEGER) END,
-  CASE WHEN 複勝1着_艇番 = '' OR 複勝1着_艇番 IS NULL THEN NULL ELSE CAST(複勝1着_艇番 AS INTEGER) END,
+  
+  CASE WHEN 複勝1着_艇番 = '' OR 複勝1着_艇番 IS NULL THEN NULL ELSE 複勝1着_艇番 END,
   CASE WHEN 複勝1着_払戻金 = '' OR 複勝1着_払戻金 IS NULL THEN NULL ELSE CAST(複勝1着_払戻金 AS INTEGER) END,
-  CASE WHEN 複勝2着_艇番 = '' OR 複勝2着_艇番 IS NULL THEN NULL ELSE CAST(複勝2着_艇番 AS INTEGER) END,
+  
+  CASE WHEN 複勝2着_艇番 = '' OR 複勝2着_艇番 IS NULL THEN NULL ELSE 複勝2着_艇番 END,
   CASE WHEN 複勝2着_払戻金 = '' OR 複勝2着_払戻金 IS NULL THEN NULL ELSE CAST(複勝2着_払戻金 AS INTEGER) END,
-  \`2連単_艇番\`,
-  CASE WHEN \`2連単_払戻金\` = '' OR \`2連単_払戻金\` IS NULL THEN NULL ELSE CAST(\`2連単_払戻金\` AS INTEGER) END,
-  CASE WHEN \`2連単_人気\` = '' OR \`2連単_人気\` IS NULL THEN NULL ELSE CAST(\`2連単_人気\` AS INTEGER) END,
-  \`2連複_艇番\`,
-  CASE WHEN \`2連複_払戻金\` = '' OR \`2連複_払戻金\` IS NULL THEN NULL ELSE CAST(\`2連複_払戻金\` AS INTEGER) END,
-  CASE WHEN \`2連複_人気\` = '' OR \`2連複_人気\` IS NULL THEN NULL ELSE CAST(\`2連複_人気\` AS INTEGER) END,
-  拡連複1_艇番,
+  
+  -- 2連単
+  CASE WHEN "2連単_艇番" = '' OR "2連単_艇番" IS NULL THEN NULL ELSE "2連単_艇番" END,
+  CASE WHEN "2連単_払戻金" = '' OR "2連単_払戻金" IS NULL THEN NULL ELSE CAST("2連単_払戻金" AS INTEGER) END,
+  CASE WHEN "2連単_人気" = '' OR "2連単_人気" IS NULL THEN NULL ELSE CAST("2連単_人気" AS INTEGER) END,
+  
+  -- 2連複
+  CASE WHEN "2連複_艇番" = '' OR "2連複_艇番" IS NULL THEN NULL ELSE "2連複_艇番" END,
+  CASE WHEN "2連複_払戻金" = '' OR "2連複_払戻金" IS NULL THEN NULL ELSE CAST("2連複_払戻金" AS INTEGER) END,
+  CASE WHEN "2連複_人気" = '' OR "2連複_人気" IS NULL THEN NULL ELSE CAST("2連複_人気" AS INTEGER) END,
+  
+  -- 拡連複
+  CASE WHEN 拡連複1_艇番 = '' OR 拡連複1_艇番 IS NULL THEN NULL ELSE 拡連複1_艇番 END,
   CASE WHEN 拡連複1_払戻金 = '' OR 拡連複1_払戻金 IS NULL THEN NULL ELSE CAST(拡連複1_払戻金 AS INTEGER) END,
   CASE WHEN 拡連複1_人気 = '' OR 拡連複1_人気 IS NULL THEN NULL ELSE CAST(拡連複1_人気 AS INTEGER) END,
-  拡連複2_艇番,
+  
+  CASE WHEN 拡連複2_艇番 = '' OR 拡連複2_艇番 IS NULL THEN NULL ELSE 拡連複2_艇番 END,
   CASE WHEN 拡連複2_払戻金 = '' OR 拡連複2_払戻金 IS NULL THEN NULL ELSE CAST(拡連複2_払戻金 AS INTEGER) END,
   CASE WHEN 拡連複2_人気 = '' OR 拡連複2_人気 IS NULL THEN NULL ELSE CAST(拡連複2_人気 AS INTEGER) END,
-  拡連複3_艇番,
+  
+  CASE WHEN 拡連複3_艇番 = '' OR 拡連複3_艇番 IS NULL THEN NULL ELSE 拡連複3_艇番 END,
   CASE WHEN 拡連複3_払戻金 = '' OR 拡連複3_払戻金 IS NULL THEN NULL ELSE CAST(拡連複3_払戻金 AS INTEGER) END,
   CASE WHEN 拡連複3_人気 = '' OR 拡連複3_人気 IS NULL THEN NULL ELSE CAST(拡連複3_人気 AS INTEGER) END,
-  \`3連単_艇番\`,
-  CASE WHEN \`3連単_払戻金\` = '' OR \`3連単_払戻金\` IS NULL THEN NULL ELSE CAST(\`3連単_払戻金\` AS INTEGER) END,
-  CASE WHEN \`3連単_人気\` = '' OR \`3連単_人気\` IS NULL THEN NULL ELSE CAST(\`3連単_人気\` AS INTEGER) END,
-  \`3連複_艇番\`,
-  CASE WHEN \`3連複_払戻金\` = '' OR \`3連複_払戻金\` IS NULL THEN NULL ELSE CAST(\`3連複_払戻金\` AS INTEGER) END,
-  CASE WHEN \`3連複_人気\` = '' OR \`3連複_人気\` IS NULL THEN NULL ELSE CAST(\`3連複_人気\` AS INTEGER) END,
-  CASE WHEN \`1艇_着順\` = '' OR \`1艇_着順\` IS NULL THEN NULL ELSE CAST(\`1艇_着順\` AS INTEGER) END,
-  CASE WHEN \`1艇_選手登番\` = '' OR \`1艇_選手登番\` IS NULL THEN NULL ELSE CAST(\`1艇_選手登番\` AS INTEGER) END,
-  CASE WHEN \`1艇_艇番\` = '' OR \`1艇_艇番\` IS NULL THEN NULL ELSE CAST(\`1艇_艇番\` AS INTEGER) END,
-  CASE WHEN \`1艇_モーター番号\` = '' OR \`1艇_モーター番号\` IS NULL THEN NULL ELSE CAST(\`1艇_モーター番号\` AS INTEGER) END,
-  CASE WHEN \`1艇_ボート番号\` = '' OR \`1艇_ボート番号\` IS NULL THEN NULL ELSE CAST(\`1艇_ボート番号\` AS INTEGER) END,
-  CASE WHEN \`1艇_展示\` = '' OR \`1艇_展示\` IS NULL THEN NULL ELSE CAST(\`1艇_展示\` AS REAL) END,
-  CASE WHEN \`1艇_進入\` = '' OR \`1艇_進入\` IS NULL THEN NULL ELSE CAST(\`1艇_進入\` AS INTEGER) END,
-  CASE WHEN \`1艇_スタートタイミング\` = '' OR \`1艇_スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`1艇_スタートタイミング\` AS REAL) END,
-  CASE WHEN \`1艇_レースタイム\` = '' OR \`1艇_レースタイム\` IS NULL THEN NULL ELSE CAST(\`1艇_レースタイム\` AS REAL) END,
-  CASE WHEN \`2艇_着順\` = '' OR \`2艇_着順\` IS NULL THEN NULL ELSE CAST(\`2艇_着順\` AS INTEGER) END,
-  CASE WHEN \`2艇_選手登番\` = '' OR \`2艇_選手登番\` IS NULL THEN NULL ELSE CAST(\`2艇_選手登番\` AS INTEGER) END,
-  CASE WHEN \`2艇_艇番\` = '' OR \`2艇_艇番\` IS NULL THEN NULL ELSE CAST(\`2艇_艇番\` AS INTEGER) END,
-  CASE WHEN \`2艇_モーター番号\` = '' OR \`2艇_モーター番号\` IS NULL THEN NULL ELSE CAST(\`2艇_モーター番号\` AS INTEGER) END,
-  CASE WHEN \`2艇_ボート番号\` = '' OR \`2艇_ボート番号\` IS NULL THEN NULL ELSE CAST(\`2艇_ボート番号\` AS INTEGER) END,
-  CASE WHEN \`2艇_展示\` = '' OR \`2艇_展示\` IS NULL THEN NULL ELSE CAST(\`2艇_展示\` AS REAL) END,
-  CASE WHEN \`2艇_進入\` = '' OR \`2艇_進入\` IS NULL THEN NULL ELSE CAST(\`2艇_進入\` AS INTEGER) END,
-  CASE WHEN \`2艇_スタートタイミング\` = '' OR \`2艇_スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`2艇_スタートタイミング\` AS REAL) END,
-  CASE WHEN \`2艇_レースタイム\` = '' OR \`2艇_レースタイム\` IS NULL THEN NULL ELSE CAST(\`2艇_レースタイム\` AS REAL) END,
-  CASE WHEN \`3艇_着順\` = '' OR \`3艇_着順\` IS NULL THEN NULL ELSE CAST(\`3艇_着順\` AS INTEGER) END,
-  CASE WHEN \`3艇_選手登番\` = '' OR \`3艇_選手登番\` IS NULL THEN NULL ELSE CAST(\`3艇_選手登番\` AS INTEGER) END,
-  CASE WHEN \`3艇_艇番\` = '' OR \`3艇_艇番\` IS NULL THEN NULL ELSE CAST(\`3艇_艇番\` AS INTEGER) END,
-  CASE WHEN \`3艇_モーター番号\` = '' OR \`3艇_モーター番号\` IS NULL THEN NULL ELSE CAST(\`3艇_モーター番号\` AS INTEGER) END,
-  CASE WHEN \`3艇_ボート番号\` = '' OR \`3艇_ボート番号\` IS NULL THEN NULL ELSE CAST(\`3艇_ボート番号\` AS INTEGER) END,
-  CASE WHEN \`3艇_展示\` = '' OR \`3艇_展示\` IS NULL THEN NULL ELSE CAST(\`3艇_展示\` AS REAL) END,
-  CASE WHEN \`3艇_進入\` = '' OR \`3艇_進入\` IS NULL THEN NULL ELSE CAST(\`3艇_進入\` AS INTEGER) END,
-  CASE WHEN \`3艇_スタートタイミング\` = '' OR \`3艇_スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`3艇_スタートタイミング\` AS REAL) END,
-  CASE WHEN \`3艇_レースタイム\` = '' OR \`3艇_レースタイム\` IS NULL THEN NULL ELSE CAST(\`3艇_レースタイム\` AS REAL) END,
-  CASE WHEN \`4艇_着順\` = '' OR \`4艇_着順\` IS NULL THEN NULL ELSE CAST(\`4艇_着順\` AS INTEGER) END,
-  CASE WHEN \`4艇_選手登番\` = '' OR \`4艇_選手登番\` IS NULL THEN NULL ELSE CAST(\`4艇_選手登番\` AS INTEGER) END,
-  CASE WHEN \`4艇_艇番\` = '' OR \`4艇_艇番\` IS NULL THEN NULL ELSE CAST(\`4艇_艇番\` AS INTEGER) END,
-  CASE WHEN \`4艇_モーター番号\` = '' OR \`4艇_モーター番号\` IS NULL THEN NULL ELSE CAST(\`4艇_モーター番号\` AS INTEGER) END,
-  CASE WHEN \`4艇_ボート番号\` = '' OR \`4艇_ボート番号\` IS NULL THEN NULL ELSE CAST(\`4艇_ボート番号\` AS INTEGER) END,
-  CASE WHEN \`4艇_展示\` = '' OR \`4艇_展示\` IS NULL THEN NULL ELSE CAST(\`4艇_展示\` AS REAL) END,
-  CASE WHEN \`4艇_進入\` = '' OR \`4艇_進入\` IS NULL THEN NULL ELSE CAST(\`4艇_進入\` AS INTEGER) END,
-  CASE WHEN \`4艇_スタートタイミング\` = '' OR \`4艇_スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`4艇_スタートタイミング\` AS REAL) END,
-  CASE WHEN \`4艇_レースタイム\` = '' OR \`4艇_レースタイム\` IS NULL THEN NULL ELSE CAST(\`4艇_レースタイム\` AS REAL) END,
-  CASE WHEN \`5艇_着順\` = '' OR \`5艇_着順\` IS NULL THEN NULL ELSE CAST(\`5艇_着順\` AS INTEGER) END,
-  CASE WHEN \`5艇_選手登番\` = '' OR \`5艇_選手登番\` IS NULL THEN NULL ELSE CAST(\`5艇_選手登番\` AS INTEGER) END,
-  CASE WHEN \`5艇_艇番\` = '' OR \`5艇_艇番\` IS NULL THEN NULL ELSE CAST(\`5艇_艇番\` AS INTEGER) END,
-  CASE WHEN \`5艇_モーター番号\` = '' OR \`5艇_モーター番号\` IS NULL THEN NULL ELSE CAST(\`5艇_モーター番号\` AS INTEGER) END,
-  CASE WHEN \`5艇_ボート番号\` = '' OR \`5艇_ボート番号\` IS NULL THEN NULL ELSE CAST(\`5艇_ボート番号\` AS INTEGER) END,
-  CASE WHEN \`5艇_展示\` = '' OR \`5艇_展示\` IS NULL THEN NULL ELSE CAST(\`5艇_展示\` AS REAL) END,
-  CASE WHEN \`5艇_進入\` = '' OR \`5艇_進入\` IS NULL THEN NULL ELSE CAST(\`5艇_進入\` AS INTEGER) END,
-  CASE WHEN \`5艇_スタートタイミング\` = '' OR \`5艇_スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`5艇_スタートタイミング\` AS REAL) END,
-  CASE WHEN \`5艇_レースタイム\` = '' OR \`5艇_レースタイム\` IS NULL THEN NULL ELSE CAST(\`5艇_レースタイム\` AS REAL) END,
-  CASE WHEN \`6艇_着順\` = '' OR \`6艇_着順\` IS NULL THEN NULL ELSE CAST(\`6艇_着順\` AS INTEGER) END,
-  CASE WHEN \`6艇_選手登番\` = '' OR \`6艇_選手登番\` IS NULL THEN NULL ELSE CAST(\`6艇_選手登番\` AS INTEGER) END,
-  CASE WHEN \`6艇_艇番\` = '' OR \`6艇_艇番\` IS NULL THEN NULL ELSE CAST(\`6艇_艇番\` AS INTEGER) END,
-  CASE WHEN \`6艇_モーター番号\` = '' OR \`6艇_モーター番号\` IS NULL THEN NULL ELSE CAST(\`6艇_モーター番号\` AS INTEGER) END,
-  CASE WHEN \`6艇_ボート番号\` = '' OR \`6艇_ボート番号\` IS NULL THEN NULL ELSE CAST(\`6艇_ボート番号\` AS INTEGER) END,
-  CASE WHEN \`6艇_展示\` = '' OR \`6艇_展示\` IS NULL THEN NULL ELSE CAST(\`6艇_展示\` AS REAL) END,
-  CASE WHEN \`6艇_進入\` = '' OR \`6艇_進入\` IS NULL THEN NULL ELSE CAST(\`6艇_進入\` AS INTEGER) END,
-  CASE WHEN \`6艇_スタートタイミング\` = '' OR \`6艇_スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`6艇_スタートタイミング\` AS REAL) END,
-  CASE WHEN \`6艇_レースタイム\` = '' OR \`6艇_レースタイム\` IS NULL THEN NULL ELSE CAST(\`6艇_レースタイム\` AS REAL) END
-FROM temp_new_results
-WHERE 年 != '年' AND 年 IS NOT NULL AND 年 != '';
+  
+  -- 3連単
+  CASE WHEN "3連単_艇番" = '' OR "3連単_艇番" IS NULL THEN NULL ELSE "3連単_艇番" END,
+  CASE WHEN "3連単_払戻金" = '' OR "3連単_払戻金" IS NULL THEN NULL ELSE CAST("3連単_払戻金" AS INTEGER) END,
+  CASE WHEN "3連単_人気" = '' OR "3連単_人気" IS NULL THEN NULL ELSE CAST("3連単_人気" AS INTEGER) END,
+  
+  -- 3連複
+  CASE WHEN "3連複_艇番" = '' OR "3連複_艇番" IS NULL THEN NULL ELSE "3連複_艇番" END,
+  CASE WHEN "3連複_払戻金" = '' OR "3連複_払戻金" IS NULL THEN NULL ELSE CAST("3連複_払戻金" AS INTEGER) END,
+  CASE WHEN "3連複_人気" = '' OR "3連複_人気" IS NULL THEN NULL ELSE CAST("3連複_人気" AS INTEGER) END,
+  
+  -- 個別艇情報
+  CASE WHEN 着順 = '' OR 着順 IS NULL THEN NULL ELSE CAST(着順 AS INTEGER) END,
+  CASE WHEN 選手登番 = '' OR 選手登番 IS NULL THEN NULL ELSE CAST(選手登番 AS INTEGER) END,
+  CASE WHEN 艇番 = '' OR 艇番 IS NULL THEN NULL ELSE CAST(艇番 AS INTEGER) END,
+  CASE WHEN モーター番号 = '' OR モーター番号 IS NULL THEN NULL ELSE CAST(モーター番号 AS INTEGER) END,
+  CASE WHEN ボート番号 = '' OR ボート番号 IS NULL THEN NULL ELSE CAST(ボート番号 AS INTEGER) END,
+  
+  -- 展示タイム（実数変換）
+  CASE WHEN 展示 = '' OR 展示 IS NULL THEN NULL ELSE CAST(展示 AS REAL) END,
+  
+  CASE WHEN 進入 = '' OR 進入 IS NULL THEN NULL ELSE CAST(進入 AS INTEGER) END,
+  
+  -- スタートタイミング（実数変換）
+  CASE WHEN スタートタイミング = '' OR スタートタイミング IS NULL THEN NULL ELSE CAST(スタートタイミング AS REAL) END,
+  
+  -- レースタイム（文字列のまま）
+  CASE WHEN レースタイム = '' OR レースタイム IS NULL THEN NULL ELSE レースタイム END
+  
+FROM temp_results_incremental
+WHERE 年 != '年' AND 年 IS NOT NULL AND 年 != ''
+AND NOT EXISTS (
+  SELECT 1 FROM results 
+  WHERE results.year = temp_results_incremental.年
+    AND results.month = temp_results_incremental.月
+    AND results.day = temp_results_incremental.日
+    AND results.venue_code = temp_results_incremental.レース場番号
+    AND results.race_number = temp_results_incremental.レース番号
+    AND results.racer_number = temp_results_incremental.選手登番
+);
 
--- 一時テーブルを削除
-DROP TABLE temp_new_results;
+-- 一時テーブル削除
+DROP TABLE temp_results_incremental;
 EOF
 
-# インポート結果確認
+# 増分インポート結果の確認
 NEW_COUNT=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM results;")
-echo "更新完了: 現在のレコード数 $NEW_COUNT 件"
+ADDED_COUNT=$((NEW_COUNT - CURRENT_COUNT))
 
-echo "=== 増分インポート完了 ==="
+echo ""
+echo "増分インポート結果:"
+echo "追加前: $CURRENT_COUNT 件"
+echo "追加後: $NEW_COUNT 件"
+echo "新規追加: $ADDED_COUNT 件"
+
+# 最新データの確認
+echo ""
+echo "最新データ（3件）:"
+sqlite3 "$DB_FILE" "
+SELECT 
+  year || '-' || printf('%02d', month) || '-' || printf('%02d', day) as date,
+  venue_code as venue,
+  race_number as race,
+  racer_number,
+  boat_number,
+  finish_position
+FROM results 
+ORDER BY year DESC, month DESC, day DESC, venue_code DESC, race_number DESC 
+LIMIT 3;"
+
+echo ""
+echo "=== レース結果データ増分インポート完了 ==="
