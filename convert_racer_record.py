@@ -647,11 +647,15 @@ def write_csv(results, output_file, year, period):
         "出身地",
     ]
 
-    with open(output_file, "w", newline="", encoding="utf-8") as f:
+    # ファイルが存在するかチェック
+    file_exists = os.path.exists(output_file)
+
+    with open(output_file, "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
 
-        # ヘッダーを書き込み
-        writer.writerow(headers)
+        # ヘッダーを書き込み（ファイルが存在しない場合のみ）
+        if not file_exists:
+            writer.writerow(headers)
 
         # データを書き込み
         for row in results:
@@ -735,9 +739,8 @@ def main():
         print("エラー: データが見つかりませんでした")
         sys.exit(1)
 
-    # 出力ファイル名を生成
-    output_filename = f"racer_{year}{period}.csv"
-    output_path = os.path.join("data", output_filename)
+    # 出力ファイル名を生成（統一ファイル）
+    output_path = os.path.join("data", "racer.csv")
 
     # 出力ディレクトリの作成
     os.makedirs("data", exist_ok=True)
