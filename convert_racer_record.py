@@ -444,6 +444,15 @@ def convert_nengou(nengou):
     return nengou
 
 
+def convert_period(period):
+    """期変換（e=0, l=1）"""
+    if period == "e":
+        return 0
+    elif period == "l":
+        return 1
+    return period
+
+
 def format_date(date_str, nengou):
     """生年月日フォーマット（年号付き）"""
     if not date_str or len(date_str) != 6:
@@ -659,8 +668,9 @@ def write_csv(results, output_file, year, period):
 
         # データを書き込み
         for row in results:
-            # 年と期を先頭に追加
-            new_row = [year, period] + row
+            # 年と期を先頭に追加（期はe=0, l=1に変換）
+            period_num = convert_period(period)
+            new_row = [year, period_num] + row
             writer.writerow(new_row)
 
 
@@ -680,11 +690,11 @@ def sort_csv_file(file_path):
         data_rows = rows[1:]
 
         # データをソート（年、期、登番の順）
-        # 年は数値、期はe=0/l=1、登番は数値でソート
+        # 年は数値、期は0/1、登番は数値でソート
         def sort_key(row):
             try:
                 year = int(row[0])  # 年
-                period = 0 if row[1] == "e" else 1  # 期（e=0, l=1）
+                period = int(row[1])  # 期（0=前期, 1=後期）
                 touban = int(row[2])  # 登番
                 return (year, period, touban)
             except (ValueError, IndexError):
