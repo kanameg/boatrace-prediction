@@ -818,7 +818,7 @@ def main():
         sys.exit(1)
 
     # 出力ファイル名を生成（統一ファイル）
-    output_path = os.path.join("data", "racer.csv")
+    output_path = os.path.join("data", "racers.csv")
 
     # 出力ディレクトリの作成
     os.makedirs("data", exist_ok=True)
