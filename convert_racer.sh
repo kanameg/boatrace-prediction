@@ -57,7 +57,7 @@ fi
 # ファイル名とパス生成
 INPUT_FILENAME="racer_${YEAR_FULL}${PERIOD}.txt"
 OUTPUT_FILENAME="racer_${YEAR_FULL}${PERIOD}.csv"
-INPUT_PATH="data/raw/racer_records/${INPUT_FILENAME}"
+INPUT_PATH="data/raw/racer/${INPUT_FILENAME}"
 OUTPUT_PATH="data/${OUTPUT_FILENAME}"
 
 echo "処理開始: ${YEAR_FULL}年${PERIOD_NAME}のレーサー期別成績データを変換します"
@@ -74,7 +74,7 @@ mkdir -p "data"
 
 # Pythonスクリプトを実行してデータ変換
 echo "データ変換中..."
-if ! python3 convert_racer_record.py "$PERIOD" "$YEAR"; then
+if ! python3 convert_racer.py "$PERIOD" "$YEAR"; then
     error_exit "データ変換に失敗しました"
 fi
 
