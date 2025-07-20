@@ -664,6 +664,45 @@ def write_csv(results, output_file, year, period):
             writer.writerow(new_row)
 
 
+def sort_csv_file(file_path):
+    """CSVファイルを年、期、登番でソートする"""
+    try:
+        # CSVファイルを読み込み
+        with open(file_path, "r", newline="", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+
+        if len(rows) <= 1:  # ヘッダーのみまたは空の場合
+            return
+
+        # ヘッダーと データを分離
+        header = rows[0]
+        data_rows = rows[1:]
+
+        # データをソート（年、期、登番の順）
+        # 年は数値、期はe=0/l=1、登番は数値でソート
+        def sort_key(row):
+            try:
+                year = int(row[0])  # 年
+                period = 0 if row[1] == "e" else 1  # 期（e=0, l=1）
+                touban = int(row[2])  # 登番
+                return (year, period, touban)
+            except (ValueError, IndexError):
+                # エラーの場合は末尾に配置
+                return (9999, 9999, 9999)
+
+        sorted_data = sorted(data_rows, key=sort_key)
+
+        # ソート済みデータを書き戻し
+        with open(file_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(header)  # ヘッダーを書き込み
+            writer.writerows(sorted_data)  # ソート済みデータを書き込み
+
+    except Exception as e:
+        print(f"警告: ソート処理中にエラーが発生しました: {e}")
+
+
 def convert_fullwidth_spaces_in_name(text):
     """名前漢字の全角スペース変換（1文字削除、2文字以上は半角スペースに変換）"""
     if not text:
@@ -747,6 +786,9 @@ def main():
 
     # CSVファイルに出力
     write_csv(results, output_path, year, period)
+
+    # データを年、期、登番でソートする
+    sort_csv_file(output_path)
 
     print(f"変換完了: {len(results)}件のデータを {output_path} に出力しました")
 
