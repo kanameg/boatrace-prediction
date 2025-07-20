@@ -57,7 +57,7 @@ fi
 # ファイル名とパス生成
 INPUT_FILENAME="racer_${YEAR_FULL}${PERIOD}.txt"
 INPUT_PATH="data/raw/racer/${INPUT_FILENAME}"
-OUTPUT_PATH="data/racer.csv"
+OUTPUT_PATH="data/racers.csv"
 
 echo "処理開始: ${YEAR_FULL}年${PERIOD_NAME}のレーサー期別成績データを変換します"
 echo "入力ファイル: ${INPUT_PATH}"
