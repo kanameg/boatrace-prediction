@@ -1,8 +1,62 @@
--- results テーブル定義
--- レース結果、払戻金、着順などの情報を格納
+-- レース結果テーブル作成用SQLスクリプト
+-- data/results.csvをインポートするためのテーブル定義
+-- 新しい構造: 1艇1行のフォーマットに対応
 
+-- 既存のテーブルを削除（存在する場合）
 DROP TABLE IF EXISTS results;
 
+-- 一時インポート用テーブル（CSVと同じカラム名）
+DROP TABLE IF EXISTS temp_results;
+CREATE TABLE temp_results (
+  年 INTEGER,
+  月 INTEGER,
+  日 INTEGER,
+  レース場番号 INTEGER,
+  レース番号 INTEGER,
+  距離 INTEGER,
+  天候 TEXT,
+  風向 TEXT,
+  風速 REAL,
+  波高 REAL,
+  単勝_艇番 TEXT,
+  単勝_払戻金 TEXT,
+  複勝1着_艇番 TEXT,
+  複勝1着_払戻金 TEXT,
+  複勝2着_艇番 TEXT,
+  複勝2着_払戻金 TEXT,
+  '2連単_艇番' TEXT,
+  '2連単_払戻金' TEXT,
+  '2連単_人気' TEXT,
+  '2連複_艇番' TEXT,
+  '2連複_払戻金' TEXT,
+  '2連複_人気' TEXT,
+  拡連複1_艇番 TEXT,
+  拡連複1_払戻金 TEXT,
+  拡連複1_人気 TEXT,
+  拡連複2_艇番 TEXT,
+  拡連複2_払戻金 TEXT,
+  拡連複2_人気 TEXT,
+  拡連複3_艇番 TEXT,
+  拡連複3_払戻金 TEXT,
+  拡連複3_人気 TEXT,
+  '3連単_艇番' TEXT,
+  '3連単_払戻金' TEXT,
+  '3連単_人気' TEXT,
+  '3連複_艇番' TEXT,
+  '3連複_払戻金' TEXT,
+  '3連複_人気' TEXT,
+  着順 TEXT,
+  選手登番 TEXT,
+  艇番 TEXT,
+  モーター番号 TEXT,
+  ボート番号 TEXT,
+  展示 TEXT,
+  進入 TEXT,
+  スタートタイミング TEXT,
+  レースタイム TEXT
+);
+
+-- 本テーブル（英語カラム名、正規化された構造）
 CREATE TABLE results (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   year INTEGER NOT NULL,
@@ -19,11 +73,11 @@ CREATE TABLE results (
   wave_height REAL NOT NULL,
   
   -- 払戻金情報
-  win_boat_number INTEGER,
+  win_boat_number TEXT,
   win_payout INTEGER,
-  place_1st_boat_number INTEGER,
+  place_1st_boat_number TEXT,
   place_1st_payout INTEGER,
-  place_2nd_boat_number INTEGER,
+  place_2nd_boat_number TEXT,
   place_2nd_payout INTEGER,
   
   -- 2連単
@@ -57,83 +111,29 @@ CREATE TABLE results (
   trio_payout INTEGER,
   trio_popularity INTEGER,
   
-  -- 1号艇結果
-  racer1_finish_position INTEGER,
-  racer1_number INTEGER,
-  racer1_boat_number INTEGER,
-  racer1_motor_number INTEGER,
-  racer1_boat_number_assigned INTEGER,
-  racer1_exhibition_time REAL,
-  racer1_start_course INTEGER,
-  racer1_start_timing REAL,
-  racer1_race_time REAL,
+  -- 選手個別情報（1艇1行構造）
+  finish_position INTEGER,
+  racer_number INTEGER NOT NULL,
+  boat_number INTEGER NOT NULL,
+  motor_number INTEGER,
+  boat_number_assigned INTEGER,
+  exhibition_time REAL,
+  start_course INTEGER,
+  start_timing REAL,
+  race_time TEXT,
   
-  -- 2号艇結果
-  racer2_finish_position INTEGER,
-  racer2_number INTEGER,
-  racer2_boat_number INTEGER,
-  racer2_motor_number INTEGER,
-  racer2_boat_number_assigned INTEGER,
-  racer2_exhibition_time REAL,
-  racer2_start_course INTEGER,
-  racer2_start_timing REAL,
-  racer2_race_time REAL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   
-  -- 3号艇結果
-  racer3_finish_position INTEGER,
-  racer3_number INTEGER,
-  racer3_boat_number INTEGER,
-  racer3_motor_number INTEGER,
-  racer3_boat_number_assigned INTEGER,
-  racer3_exhibition_time REAL,
-  racer3_start_course INTEGER,
-  racer3_start_timing REAL,
-  racer3_race_time REAL,
-  
-  -- 4号艇結果
-  racer4_finish_position INTEGER,
-  racer4_number INTEGER,
-  racer4_boat_number INTEGER,
-  racer4_motor_number INTEGER,
-  racer4_boat_number_assigned INTEGER,
-  racer4_exhibition_time REAL,
-  racer4_start_course INTEGER,
-  racer4_start_timing REAL,
-  racer4_race_time REAL,
-  
-  -- 5号艇結果
-  racer5_finish_position INTEGER,
-  racer5_number INTEGER,
-  racer5_boat_number INTEGER,
-  racer5_motor_number INTEGER,
-  racer5_boat_number_assigned INTEGER,
-  racer5_exhibition_time REAL,
-  racer5_start_course INTEGER,
-  racer5_start_timing REAL,
-  racer5_race_time REAL,
-  
-  -- 6号艇結果
-  racer6_finish_position INTEGER,
-  racer6_number INTEGER,
-  racer6_boat_number INTEGER,
-  racer6_motor_number INTEGER,
-  racer6_boat_number_assigned INTEGER,
-  racer6_exhibition_time REAL,
-  racer6_start_course INTEGER,
-  racer6_start_timing REAL,
-  racer6_race_time REAL,
-  
-  -- インデックス用の複合キー
-  UNIQUE(year, month, day, venue_code, race_number)
+  -- インデックス用の複合キー（年月日、会場、レース番号、選手登番でユニーク）
+  UNIQUE(year, month, day, venue_code, race_number, racer_number)
 );
 
--- インデックス作成
+-- インデックスの作成
 CREATE INDEX idx_results_date ON results(year, month, day);
 CREATE INDEX idx_results_venue ON results(venue_code);
 CREATE INDEX idx_results_race ON results(race_number);
-CREATE INDEX idx_results_racer1 ON results(racer1_number);
-CREATE INDEX idx_results_racer2 ON results(racer2_number);
-CREATE INDEX idx_results_racer3 ON results(racer3_number);
-CREATE INDEX idx_results_racer4 ON results(racer4_number);
-CREATE INDEX idx_results_racer5 ON results(racer5_number);
-CREATE INDEX idx_results_racer6 ON results(racer6_number);
+CREATE INDEX idx_results_racer ON results(racer_number);
+CREATE INDEX idx_results_finish ON results(finish_position);
+CREATE INDEX idx_results_date_venue ON results(year, month, day, venue_code);
+CREATE INDEX idx_results_date_venue_race ON results(year, month, day, venue_code, race_number);
