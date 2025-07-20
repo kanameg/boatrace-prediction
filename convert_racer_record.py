@@ -497,9 +497,11 @@ def parse_racer_data(file_path):
     return results
 
 
-def write_csv(results, output_file):
+def write_csv(results, output_file, year, period):
     """結果をCSVファイルに出力"""
     headers = [
+        "年",
+        "期",
         "登番",
         "名前漢字",
         "名前カナ",
@@ -653,7 +655,9 @@ def write_csv(results, output_file):
 
         # データを書き込み
         for row in results:
-            writer.writerow(row)
+            # 年と期を先頭に追加
+            new_row = [year, period] + row
+            writer.writerow(new_row)
 
 
 def convert_fullwidth_spaces_in_name(text):
@@ -715,7 +719,7 @@ def main():
 
     # 入力ファイル名を生成
     input_filename = f"racer_{year}{period}.txt"
-    input_path = os.path.join("data", "raw", "racer_records", input_filename)
+    input_path = os.path.join("data", "raw", "racer", input_filename)
 
     # ファイルの存在確認
     if not os.path.exists(input_path):
@@ -739,7 +743,7 @@ def main():
     os.makedirs("data", exist_ok=True)
 
     # CSVファイルに出力
-    write_csv(results, output_path)
+    write_csv(results, output_path, year, period)
 
     print(f"変換完了: {len(results)}件のデータを {output_path} に出力しました")
 
