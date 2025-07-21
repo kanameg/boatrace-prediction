@@ -95,28 +95,25 @@ def load_and_preprocess_programs(file_path, start_date=None, end_date=None):
     # 級別を数値に変換
     programs_df["級別"] = programs_df["級別"].apply(grade_to_numeric)
 
-    # 不要な列を削除
-    columns_to_drop = [
-        "年",
-        "月",
-        "日",
-        "レース場番号",
-        "レース番号",
-        "距離",
-        "投票締切時間",
-        "支部",
-        "モーター番号",
-        "ボート番号",
+    # 特徴量として必要なカラムのみを選択
+    feature_columns = [
+        "レースID",
+        "枠番",
+        "選手登番",
+        "年齢",
+        "体重",
+        "級別",
+        "全国勝率",
+        "全国2連率",
+        "当地勝率",
+        "当地2連率",
+        "モーター2連率",
+        "ボート2連率",
     ]
 
-    # 開催日列が存在する場合は削除
-    if "開催日" in programs_df.columns:
-        columns_to_drop.append("開催日")
-
-    programs_df.drop(
-        columns=[col for col in columns_to_drop if col in programs_df.columns],
-        inplace=True,
-    )
+    # 存在するカラムのみを選択
+    available_columns = [col for col in feature_columns if col in programs_df.columns]
+    programs_df = programs_df[available_columns]
 
     print(f"前処理完了: {programs_df.shape}")
     return programs_df
@@ -224,8 +221,8 @@ def create_features(start_date=None, end_date=None, output_path="data/train.csv"
         # データマージ
         merged_df = merge_programs_and_results(programs_df, results_df)
 
-        # 選手登番を削除（特徴量としては不要）
-        final_df = merged_df.drop(columns=["選手登番"])
+        # レースIDと選手登番を削除（特徴量としては不要）
+        final_df = merged_df.drop(columns=["レースID", "選手登番"])
 
         # 出力
         print(f"=== {output_path}として保存中 ===")
