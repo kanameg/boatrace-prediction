@@ -221,8 +221,12 @@ def create_features(start_date=None, end_date=None, output_path="data/train.csv"
         # データマージ
         merged_df = merge_programs_and_results(programs_df, results_df)
 
-        # レースIDと選手登番を削除（特徴量としては不要）
-        final_df = merged_df.drop(columns=["レースID", "選手登番"])
+        # 着順を数値に変換してから1着フラグを作成
+        merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
+        merged_df["1着フラグ"] = (merged_df["着順"] == 1).astype(int)
+
+        # レースID、選手登番、着順列を削除（特徴量としては不要）
+        final_df = merged_df.drop(columns=["レースID", "選手登番", "着順"])
 
         # 出力
         print(f"=== {output_path}として保存中 ===")
@@ -234,10 +238,15 @@ def create_features(start_date=None, end_date=None, output_path="data/train.csv"
         print(f"カラム数: {len(final_df.columns)}")
         print(f"データ期間: {start_date or '指定なし'} ～ {end_date or '指定なし'}")
 
-        # 着順の分布を確認
-        if "着順" in final_df.columns:
-            print("\n=== 着順分布 ===")
-            print(final_df["着順"].value_counts().sort_index())
+        # 1着フラグの分布を確認
+        if "1着フラグ" in final_df.columns:
+            print("\n=== 1着フラグ分布 ===")
+            flag_counts = final_df["1着フラグ"].value_counts().sort_index()
+            print(flag_counts)
+            if len(flag_counts) == 2:
+                total_count = len(final_df)
+                win_rate = flag_counts.get(1, 0) / total_count * 100
+                print(f"1着率: {win_rate:.2f}%")
 
         return final_df
 
