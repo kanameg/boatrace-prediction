@@ -90,6 +90,20 @@ def load_and_preprocess_programs(file_path, start_date=None, end_date=None):
             programs_df = programs_df[programs_df["開催日"] <= end_date_dt]
             print(f"終了日フィルタ適用 ({end_date}): {programs_df.shape}")
 
+        # データが0件の場合はエラー
+        if len(programs_df) == 0:
+            print(f"エラー: 指定された日付範囲にデータが存在しません")
+            print(f"指定範囲: {start_date or '指定なし'} ～ {end_date or '指定なし'}")
+            # データの実際の期間を表示
+            original_df = pd.read_csv(file_path)
+            original_df["開催日"] = pd.to_datetime(
+                original_df[["年", "月", "日"]].astype(str).agg("-".join, axis=1)
+            )
+            print(
+                f"利用可能な期間: {original_df['開催日'].min().date()} ～ {original_df['開催日'].max().date()}"
+            )
+            sys.exit(1)
+
     # レースIDを作成
     programs_df.insert(0, "レースID", programs_df.apply(make_race_id, axis=1))
 
@@ -151,6 +165,20 @@ def load_and_preprocess_results(file_path, start_date=None, end_date=None):
             end_date_dt = pd.to_datetime(end_date)
             results_df = results_df[results_df["開催日"] <= end_date_dt]
             print(f"終了日フィルタ適用 ({end_date}): {results_df.shape}")
+
+        # データが0件の場合はエラー
+        if len(results_df) == 0:
+            print(f"エラー: 指定された日付範囲にresults.csvのデータが存在しません")
+            print(f"指定範囲: {start_date or '指定なし'} ～ {end_date or '指定なし'}")
+            # データの実際の期間を表示
+            original_df = pd.read_csv(file_path)
+            original_df["開催日"] = pd.to_datetime(
+                original_df[["年", "月", "日"]].astype(str).agg("-".join, axis=1)
+            )
+            print(
+                f"利用可能な期間: {original_df['開催日'].min().date()} ～ {original_df['開催日'].max().date()}"
+            )
+            sys.exit(1)
 
     # レースIDを作成
     results_df.insert(0, "レースID", results_df.apply(make_race_id, axis=1))
