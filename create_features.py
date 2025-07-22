@@ -128,7 +128,18 @@ def load_and_preprocess_programs(file_path, start_date=None, end_date=None):
 
     # 存在するカラムのみを選択
     available_columns = [col for col in feature_columns if col in programs_df.columns]
+    print(f"available_columns: {available_columns}")
     programs_df = programs_df[available_columns]
+
+    # レース内全国勝率差を追加
+    def calc_win_rate_diff(rates):
+        rates_numeric = pd.to_numeric(rates, errors="coerce")
+        avg_rate = rates_numeric.mean()
+        return rates_numeric - avg_rate
+
+    programs_df["レース内全国勝率差"] = programs_df.groupby("レースID")[
+        "全国勝率"
+    ].transform(calc_win_rate_diff)
 
     print(f"前処理完了: {programs_df.shape}")
     return programs_df
