@@ -3,12 +3,13 @@
 特徴量作成スクリプト
 
 競艇予測のための特徴量を作成するスクリプトです。
-開始日と終了日を指定して、該当期間のデータから特徴量を作成し、train.csvとして出力します。
+trainモードでは学習用データを、predモードでは予測用データを作成します。
 
 使用方法:
-    python create_features.py 2025-01-01 2025-07-18
-    python create_features.py 2025-01-01           # 終了日指定なし
-    python create_features.py                      # 全期間
+    python create_features.py train 2025-01-01 2025-07-18    # 学習用データ作成
+    python create_features.py train 2025-01-01               # 学習用データ作成（終了日指定なし）
+    python create_features.py train                          # 学習用データ作成（全期間）
+    python create_features.py pred 2025-07-20                # 予測用データ作成
 """
 
 import argparse
@@ -89,6 +90,20 @@ def load_and_preprocess_programs(file_path, start_date=None, end_date=None):
             programs_df = programs_df[programs_df["開催日"] <= end_date_dt]
             print(f"終了日フィルタ適用 ({end_date}): {programs_df.shape}")
 
+        # データが0件の場合はエラー
+        if len(programs_df) == 0:
+            print(f"エラー: 指定された日付範囲にデータが存在しません")
+            print(f"指定範囲: {start_date or '指定なし'} ～ {end_date or '指定なし'}")
+            # データの実際の期間を表示
+            original_df = pd.read_csv(file_path)
+            original_df["開催日"] = pd.to_datetime(
+                original_df[["年", "月", "日"]].astype(str).agg("-".join, axis=1)
+            )
+            print(
+                f"利用可能な期間: {original_df['開催日'].min().date()} ～ {original_df['開催日'].max().date()}"
+            )
+            sys.exit(1)
+
     # レースIDを作成
     programs_df.insert(0, "レースID", programs_df.apply(make_race_id, axis=1))
 
@@ -151,6 +166,20 @@ def load_and_preprocess_results(file_path, start_date=None, end_date=None):
             results_df = results_df[results_df["開催日"] <= end_date_dt]
             print(f"終了日フィルタ適用 ({end_date}): {results_df.shape}")
 
+        # データが0件の場合はエラー
+        if len(results_df) == 0:
+            print(f"エラー: 指定された日付範囲にresults.csvのデータが存在しません")
+            print(f"指定範囲: {start_date or '指定なし'} ～ {end_date or '指定なし'}")
+            # データの実際の期間を表示
+            original_df = pd.read_csv(file_path)
+            original_df["開催日"] = pd.to_datetime(
+                original_df[["年", "月", "日"]].astype(str).agg("-".join, axis=1)
+            )
+            print(
+                f"利用可能な期間: {original_df['開催日'].min().date()} ～ {original_df['開催日'].max().date()}"
+            )
+            sys.exit(1)
+
     # レースIDを作成
     results_df.insert(0, "レースID", results_df.apply(make_race_id, axis=1))
 
@@ -200,46 +229,66 @@ def merge_programs_and_results(programs_df, results_df):
     return merged_df
 
 
-def create_features(start_date=None, end_date=None, output_path="data/train.csv"):
+def create_features(mode="train", start_date=None, end_date=None, output_path=None):
     """
     特徴量を作成するメイン関数
 
     Args:
+        mode: 動作モード ("train" or "pred")
         start_date: 開始日 (YYYY-MM-DD形式)
         end_date: 終了日 (YYYY-MM-DD形式)
         output_path: 出力ファイルパス
     """
+    # デフォルトの出力パスを設定
+    if output_path is None:
+        if mode == "train":
+            output_path = "data/train.csv"
+        elif mode == "pred":
+            output_path = "data/pred.csv"
+        else:
+            raise ValueError(
+                f"不正なモード: {mode}. 'train' または 'pred' を指定してください。"
+            )
+
     try:
         # データ読み込みと前処理
         programs_df = load_and_preprocess_programs(
             "data/programs.csv", start_date, end_date
         )
-        results_df = load_and_preprocess_results(
-            "data/results.csv", start_date, end_date
-        )
 
-        # データマージ
-        merged_df = merge_programs_and_results(programs_df, results_df)
+        if mode == "train":
+            # 学習モード：結果データとマージして1着フラグを作成
+            results_df = load_and_preprocess_results(
+                "data/results.csv", start_date, end_date
+            )
 
-        # 着順を数値に変換してから1着フラグを作成
-        merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
-        merged_df["1着フラグ"] = (merged_df["着順"] == 1).astype(int)
+            # データマージ
+            merged_df = merge_programs_and_results(programs_df, results_df)
 
-        # レースID、選手登番、着順列を削除（特徴量としては不要）
-        final_df = merged_df.drop(columns=["レースID", "選手登番", "着順"])
+            # 着順を数値に変換してから1着フラグを作成
+            merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
+            merged_df["1着フラグ"] = (merged_df["着順"] == 1).astype(int)
+
+            # レースID、選手登番、着順列を削除（特徴量としては不要）
+            final_df = merged_df.drop(columns=["レースID", "選手登番", "着順"])
+
+        elif mode == "pred":
+            # 予測モード：番組データのみで特徴量を作成
+            final_df = programs_df.drop(columns=["レースID", "選手登番"])
 
         # 出力
         print(f"=== {output_path}として保存中 ===")
         final_df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
         print(f"特徴量作成完了!")
+        print(f"モード: {mode}")
         print(f"出力ファイル: {output_path}")
         print(f"最終データ形状: {final_df.shape}")
         print(f"カラム数: {len(final_df.columns)}")
         print(f"データ期間: {start_date or '指定なし'} ～ {end_date or '指定なし'}")
 
-        # 1着フラグの分布を確認
-        if "1着フラグ" in final_df.columns:
+        # 1着フラグの分布を確認（学習モードのみ）
+        if mode == "train" and "1着フラグ" in final_df.columns:
             print("\n=== 1着フラグ分布 ===")
             flag_counts = final_df["1着フラグ"].value_counts().sort_index()
             print(flag_counts)
@@ -284,10 +333,17 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用例:
-  python create_features.py 2025-01-01 2025-07-18    # 開始日と終了日を指定
-  python create_features.py 2025-01-01               # 開始日のみ指定（終了日なし）
-  python create_features.py                          # 全期間
+  python create_features.py train 2025-01-01 2025-07-18    # 学習用データ作成（期間指定）
+  python create_features.py train 2025-01-01               # 学習用データ作成（開始日のみ）
+  python create_features.py train                          # 学習用データ作成（全期間）
+  python create_features.py pred 2025-07-20                # 予測用データ作成
         """,
+    )
+
+    parser.add_argument(
+        "mode",
+        choices=["train", "pred"],
+        help="動作モード ('train': 学習用データ作成, 'pred': 予測用データ作成)",
     )
 
     parser.add_argument(
@@ -307,8 +363,7 @@ def main():
     parser.add_argument(
         "--output",
         "-o",
-        default="data/train.csv",
-        help="出力ファイルパス (デフォルト: data/train.csv)",
+        help="出力ファイルパス (デフォルト: train.csv または pred.csv)",
     )
 
     args = parser.parse_args()
@@ -323,14 +378,19 @@ def main():
             sys.exit(1)
 
     print("=== 競艇予測特徴量作成スクリプト ===")
+    print(f"モード: {args.mode}")
     print(f"開始日: {args.start_date or '指定なし'}")
     print(f"終了日: {args.end_date or '指定なし'}")
-    print(f"出力ファイル: {args.output}")
+    if args.output:
+        print(f"出力ファイル: {args.output}")
     print()
 
     # 特徴量作成実行
     create_features(
-        start_date=args.start_date, end_date=args.end_date, output_path=args.output
+        mode=args.mode,
+        start_date=args.start_date,
+        end_date=args.end_date,
+        output_path=args.output,
     )
 
 
