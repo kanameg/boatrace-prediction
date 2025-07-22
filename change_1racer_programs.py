@@ -33,8 +33,8 @@ def load_race_results():
 
 def load_racer_data():
     """選手データを読み込み、コース別複勝率、平均スタート順位、1着回数、2着回数の辞書を作成"""
-    print("racer.csvを読み込み中...")
-    racer_df = pd.read_csv("/app/data/racer.csv")
+    print("racers.csvを読み込み中...")
+    racer_df = pd.read_csv("/app/data/racers.csv")
 
     # 選手登番をキーとして、各コース複勝率、平均スタート順位、1着回数、2着回数を辞書で管理
     racer_dict = {}

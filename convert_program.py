@@ -53,6 +53,7 @@ class ProgramConverter:
             "レース番号",
             "距離",
             "投票締切時間",
+            "枠番",
             "選手登番",
             "年齢",
             "支部",
@@ -316,6 +317,7 @@ class ProgramConverter:
                                 race["race_number"],
                                 race["distance"],
                                 race["time"],
+                                boat_num,  # 枠番
                                 boat["player_id"],
                                 boat["age"],
                                 boat["branch"],
