@@ -45,6 +45,7 @@ CREATE TABLE temp_programs (
   レース番号 TEXT,
   距離 TEXT,
   投票締切時間 TEXT,
+  枠番 TEXT,
   選手登番 TEXT,
   年齢 TEXT,
   支部 TEXT,
@@ -67,7 +68,7 @@ CREATE TABLE temp_programs (
 -- 一時テーブルから本テーブルにデータを移行
 INSERT INTO programs (
   year, month, day, venue_code, race_number, distance_m, deadline_time,
-  racer_number, age, branch, weight, class,
+  frame_number, racer_number, age, branch, weight, class,
   national_win_rate, national_quinella_rate, local_win_rate, local_quinella_rate,
   motor_number, motor_quinella_rate, boat_number, boat_quinella_rate
 )
@@ -75,7 +76,7 @@ SELECT
   CAST(年 AS INTEGER), CAST(月 AS INTEGER), CAST(日 AS INTEGER),
   CAST(レース場番号 AS INTEGER), CAST(レース番号 AS INTEGER), CAST(距離 AS INTEGER),
   投票締切時間,
-  CAST(選手登番 AS INTEGER), CAST(年齢 AS INTEGER), 支部, CAST(体重 AS REAL), 級別,
+  CAST(枠番 AS INTEGER), CAST(選手登番 AS INTEGER), CAST(年齢 AS INTEGER), 支部, CAST(体重 AS REAL), 級別,
   CAST(全国勝率 AS REAL), CAST(全国2連率 AS REAL), CAST(当地勝率 AS REAL), CAST(当地2連率 AS REAL),
   CAST(モーター番号 AS INTEGER), CAST(モーター2連率 AS REAL), CAST(ボート番号 AS INTEGER), CAST(ボート2連率 AS REAL)
 FROM temp_programs
