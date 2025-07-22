@@ -15,6 +15,7 @@ CREATE TABLE temp_programs (
   レース番号 INTEGER,
   距離 INTEGER,
   投票締切時間 TEXT,
+  枠番 INTEGER,
   選手登番 INTEGER,
   年齢 INTEGER,
   支部 TEXT,
@@ -42,6 +43,7 @@ CREATE TABLE programs (
   deadline_time TEXT NOT NULL,
   
   -- 選手情報（1艇1行構造）
+  frame_number INTEGER NOT NULL,
   racer_number INTEGER NOT NULL,
   age INTEGER NOT NULL,
   branch TEXT NOT NULL,
@@ -67,6 +69,7 @@ CREATE TABLE programs (
 CREATE INDEX idx_programs_date ON programs(year, month, day);
 CREATE INDEX idx_programs_venue ON programs(venue_code);
 CREATE INDEX idx_programs_race ON programs(race_number);
+CREATE INDEX idx_programs_frame ON programs(frame_number);
 CREATE INDEX idx_programs_racer ON programs(racer_number);
 CREATE INDEX idx_programs_date_venue ON programs(year, month, day, venue_code);
 CREATE INDEX idx_programs_date_venue_race ON programs(year, month, day, venue_code, race_number);
