@@ -131,15 +131,26 @@ def load_and_preprocess_programs(file_path, start_date=None, end_date=None):
     print(f"available_columns: {available_columns}")
     programs_df = programs_df[available_columns]
 
-    # レース内全国勝率差を追加
-    def calc_win_rate_diff(rates):
+    # レース内平均差を追加
+    def calc_rate_diff(rates):
         rates_numeric = pd.to_numeric(rates, errors="coerce")
         avg_rate = rates_numeric.mean()
         return rates_numeric - avg_rate
 
+    # レース内全国勝率差
     programs_df["レース内全国勝率差"] = programs_df.groupby("レースID")[
         "全国勝率"
-    ].transform(calc_win_rate_diff)
+    ].transform(calc_rate_diff)
+
+    # レース内全国2連率差
+    programs_df["レース内全国2連率差"] = programs_df.groupby("レースID")[
+        "全国2連率"
+    ].transform(calc_rate_diff)
+
+    # レース内モーター2連率差
+    programs_df["レース内モーター2連率差"] = programs_df.groupby("レースID")[
+        "モーター2連率"
+    ].transform(calc_rate_diff)
 
     print(f"前処理完了: {programs_df.shape}")
     return programs_df
