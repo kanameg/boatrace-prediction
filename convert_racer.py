@@ -445,11 +445,11 @@ def convert_nengou(nengou):
 
 
 def convert_period(period):
-    """期変換（e=0前期, l=1後期）"""
+    """期変換（e=1前期, l=2後期）"""
     if period == "e":
-        return 0
-    elif period == "l":
         return 1
+    elif period == "l":
+        return 2
     return period
 
 
@@ -509,8 +509,6 @@ def parse_racer_data(file_path):
 def write_csv(results, output_file, year, period):
     """結果をCSVファイルに出力"""
     headers = [
-        "年",
-        "期",
         "登番",
         "名前漢字",
         "名前カナ",
@@ -668,7 +666,7 @@ def write_csv(results, output_file, year, period):
                 next(reader, None)  # ヘッダーをスキップ
                 for row in reader:
                     if len(row) >= 3:  # 年、期、登番が存在する場合
-                        key = (row[0], row[1], row[2])  # 年、期、登番をキーとする
+                        key = (row[49], row[50], row[0])  # 年、期、登番をキーとする
                         existing_keys.add(key)
         except Exception as e:
             print(f"警告: 既存ファイルの読み込み中にエラーが発生しました: {e}")
@@ -686,14 +684,17 @@ def write_csv(results, output_file, year, period):
         duplicate_count = 0
 
         for row in results:
-            # 年と期を先頭に追加（期はe=0前期, l=1後期に変換）
-            new_row = [year, period_num] + row
-            key = (str(year), str(period_num), str(row[0]))  # 年、期、登番をキーとする
+            # 年と期は追加しない
+            key = (
+                str(year),
+                str(period_num),
+                str(row[0]),
+            )  # 登番のみで重複チェック（必要なら他の項目も追加可能）
 
             # 重複チェック
             if key not in existing_keys:
-                writer.writerow(new_row)
-                existing_keys.add(key)  # 今回追加したデータも重複チェック対象に追加
+                writer.writerow(row)
+                existing_keys.add(key)
                 new_rows_count += 1
             else:
                 duplicate_count += 1
@@ -722,9 +723,9 @@ def sort_csv_file(file_path):
         # 年は数値、期は0/1、登番は数値でソート
         def sort_key(row):
             try:
-                year = int(row[0])  # 年
-                period = int(row[1])  # 期（0=前期, 1=後期）
-                touban = int(row[2])  # 登番
+                year = int(row[49])  # 年
+                period = int(row[50])  # 期（1=前期, 2=後期）
+                touban = int(row[0])  # 登番
                 return (year, period, touban)
             except (ValueError, IndexError):
                 # エラーの場合は末尾に配置
