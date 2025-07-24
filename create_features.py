@@ -142,11 +142,6 @@ def load_and_preprocess_programs(file_path, start_date=None, end_date=None):
         "全国勝率"
     ].transform(calc_rate_diff)
 
-    # レース内全国2連率差
-    programs_df["レース内全国2連率差"] = programs_df.groupby("レースID")[
-        "全国2連率"
-    ].transform(calc_rate_diff)
-
     # レース内モーター2連率差
     programs_df["レース内モーター2連率差"] = programs_df.groupby("レースID")[
         "モーター2連率"
@@ -278,6 +273,16 @@ def create_features(mode="train", start_date=None, end_date=None, output_path=No
             "data/programs.csv", start_date, end_date
         )
 
+        drop_columns = [
+            "選手登番",
+            "全国勝率",
+            "全国2連率",
+            "当地勝率",
+            "当地2連率",
+            "モーター2連率",
+            "ボート2連率",
+        ]
+
         if mode == "train":
             # 学習モード：結果データとマージして1着フラグを作成
             results_df = load_and_preprocess_results(
@@ -291,12 +296,13 @@ def create_features(mode="train", start_date=None, end_date=None, output_path=No
             merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
             merged_df["1着フラグ"] = (merged_df["着順"] == 1).astype(int)
 
-            # レースID、選手登番、着順列を削除（特徴量としては不要）
-            final_df = merged_df.drop(columns=["レースID", "選手登番", "着順"])
+            # 着順列も削除（特徴量としては不要）
+            final_df = merged_df.drop(columns=drop_columns + ["着順"])
 
         elif mode == "pred":
+
             # 予測モード：番組データのみで特徴量を作成
-            final_df = programs_df.drop(columns=["レースID", "選手登番"])
+            final_df = programs_df.drop(columns=drop_columns)
 
         # 出力
         print(f"=== {output_path}として保存中 ===")
