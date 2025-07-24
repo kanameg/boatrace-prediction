@@ -665,7 +665,7 @@ def write_csv(results, output_file, year, period):
                 reader = csv.reader(f)
                 next(reader, None)  # ヘッダーをスキップ
                 for row in reader:
-                    if len(row) >= 3:  # 年、期、登番が存在する場合
+                    if len(row) > 51:  # 年、期、登番が存在する場合
                         key = (row[49], row[50], row[0])  # 年、期、登番をキーとする
                         existing_keys.add(key)
         except Exception as e:
