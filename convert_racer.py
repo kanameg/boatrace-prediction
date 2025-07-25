@@ -503,12 +503,23 @@ def parse_racer_data(file_path):
         print(f"エラー: ファイル読み込み中にエラーが発生しました: {e}")
         return []
 
+    # 年(49列目), 期(50列目)を先頭に移動
+    for i in range(len(results)):
+        row = results[i]
+        if len(row) > 50:
+            year = row[49]
+            period = row[50]
+            # 49,50列目を削除して先頭に挿入
+            new_row = [year, period] + row[:49] + row[51:]
+            results[i] = new_row
     return results
 
 
 def write_csv(results, output_file, year, period):
     """結果をCSVファイルに出力"""
     headers = [
+        "年",
+        "期",
         "登番",
         "名前漢字",
         "名前カナ",
@@ -558,8 +569,6 @@ def write_csv(results, output_file, year, period):
         "前々々期級",
         "前期能力指数",
         "今期能力指数",
-        "年",
-        "期",
         "算出期間自",
         "算出期間至",
         "養成期",
@@ -666,7 +675,11 @@ def write_csv(results, output_file, year, period):
                 next(reader, None)  # ヘッダーをスキップ
                 for row in reader:
                     if len(row) > 51:  # 年、期、登番が存在する場合
-                        key = (row[49], row[50], row[0])  # 年、期、登番をキーとする
+                        key = (
+                            row[0],
+                            row[1],
+                            row[2],
+                        )  # 年、期、登番をキーとする（先頭に移動済み）
                         existing_keys.add(key)
         except Exception as e:
             print(f"警告: 既存ファイルの読み込み中にエラーが発生しました: {e}")
@@ -684,14 +697,12 @@ def write_csv(results, output_file, year, period):
         duplicate_count = 0
 
         for row in results:
-            # 年と期は追加しない
+            # 年・期・登番（先頭3列）で重複チェック
             key = (
-                str(year),
-                str(period_num),
-                str(row[0]),
-            )  # 登番のみで重複チェック（必要なら他の項目も追加可能）
-
-            # 重複チェック
+                str(row[0]),  # 年
+                str(row[1]),  # 期
+                str(row[2]),  # 登番
+            )
             if key not in existing_keys:
                 writer.writerow(row)
                 existing_keys.add(key)
@@ -723,9 +734,9 @@ def sort_csv_file(file_path):
         # 年は数値、期は0/1、登番は数値でソート
         def sort_key(row):
             try:
-                year = int(row[49])  # 年
-                period = int(row[50])  # 期（1=前期, 2=後期）
-                touban = int(row[0])  # 登番
+                year = int(row[0])  # 年（先頭）
+                period = int(row[1])  # 期（先頭）
+                touban = int(row[2])  # 登番（先頭）
                 return (year, period, touban)
             except (ValueError, IndexError):
                 # エラーの場合は末尾に配置
