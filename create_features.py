@@ -22,13 +22,11 @@ import pandas as pd
 
 def make_race_id(row):
     """
-    年月日とレース場番号、レース番号から一意なIDを作成する関数
-
+    Create a unique race ID from date, place number, and race number.
     Args:
-        row: DataFrameの行データ
-
+        row: DataFrame row
     Returns:
-        int: レースID (YYYYMMDDPPRRR形式の整数)
+        int: Race ID (YYYYMMDDPPRRR as integer)
     """
     date_str = f"{row['年']:04d}{row['月']:02d}{row['日']:02d}"
     place_str = f"{row['レース場番号']:02d}"
@@ -38,13 +36,11 @@ def make_race_id(row):
 
 def grade_to_numeric(grade):
     """
-    級別を数値に変換する関数
-
+    Convert grade to numeric value.
     Args:
-        grade: 級別 (A1, A2, B1, B2)
-
+        grade: Grade (A1, A2, B1, B2)
     Returns:
-        int: 数値化された級別 (A1:3, A2:2, B1:1, B2:0)
+        int: Numeric grade (A1:3, A2:2, B1:1, B2:0)
     """
     if grade == "A1":
         return 3
@@ -107,7 +103,7 @@ def load_and_preprocess_programs(file_path, start_date=None, end_date=None):
     # レースIDを作成
     programs_df.insert(0, "レースID", programs_df.apply(make_race_id, axis=1))
 
-    # 級別を数値に変換
+    # Convert grade to numeric
     programs_df["級別"] = programs_df["級別"].apply(grade_to_numeric)
 
     # 特徴量として必要なカラムのみを選択
@@ -131,6 +127,31 @@ def load_and_preprocess_programs(file_path, start_date=None, end_date=None):
     print(f"available_columns: {available_columns}")
     programs_df = programs_df[available_columns]
 
+    # === コース別複勝率を追加 ===
+    racers_df = pd.read_csv("data/racers.csv")
+    lane_win_rate_column_map = {
+        1: "1コース複勝率",
+        2: "2コース複勝率",
+        3: "3コース複勝率",
+        4: "4コース複勝率",
+        5: "5コース複勝率",
+        6: "6コース複勝率",
+    }
+
+    def get_lane_win_rate(row):
+        racer_id = row["選手登番"]
+        lane = row["枠番"]
+        col_name = lane_win_rate_column_map.get(lane)
+        if col_name is None:
+            return np.nan
+        matched_rows = racers_df[racers_df["登番"] == racer_id]
+        if len(matched_rows) == 0:
+            return np.nan
+        # ファイル末尾（最新）を優先
+        return pd.to_numeric(matched_rows.iloc[-1][col_name], errors="coerce")
+
+    programs_df["コース別複勝率"] = programs_df.apply(get_lane_win_rate, axis=1)
+
     # レース内平均差を追加
     def calc_rate_diff(rates):
         rates_numeric = pd.to_numeric(rates, errors="coerce")
@@ -142,14 +163,14 @@ def load_and_preprocess_programs(file_path, start_date=None, end_date=None):
         "全国勝率"
     ].transform(calc_rate_diff)
 
-    # レース内全国2連率差
-    programs_df["レース内全国2連率差"] = programs_df.groupby("レースID")[
-        "全国2連率"
-    ].transform(calc_rate_diff)
-
     # レース内モーター2連率差
     programs_df["レース内モーター2連率差"] = programs_df.groupby("レースID")[
         "モーター2連率"
+    ].transform(calc_rate_diff)
+
+    # レース内コース別複勝率差
+    programs_df["レース内コース別複勝率差"] = programs_df.groupby("レースID")[
+        "コース別複勝率"
     ].transform(calc_rate_diff)
 
     print(f"前処理完了: {programs_df.shape}")
@@ -278,6 +299,17 @@ def create_features(mode="train", start_date=None, end_date=None, output_path=No
             "data/programs.csv", start_date, end_date
         )
 
+        drop_columns = [
+            "選手登番",
+            "全国勝率",
+            "全国2連率",
+            "当地勝率",
+            "当地2連率",
+            "モーター2連率",
+            "ボート2連率",
+            "コース別複勝率",
+        ]
+
         if mode == "train":
             # 学習モード：結果データとマージして1着フラグを作成
             results_df = load_and_preprocess_results(
@@ -291,12 +323,13 @@ def create_features(mode="train", start_date=None, end_date=None, output_path=No
             merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
             merged_df["1着フラグ"] = (merged_df["着順"] == 1).astype(int)
 
-            # レースID、選手登番、着順列を削除（特徴量としては不要）
-            final_df = merged_df.drop(columns=["レースID", "選手登番", "着順"])
+            # 着順列も削除（特徴量としては不要）
+            final_df = merged_df.drop(columns=drop_columns + ["着順"])
 
         elif mode == "pred":
+
             # 予測モード：番組データのみで特徴量を作成
-            final_df = programs_df.drop(columns=["レースID", "選手登番"])
+            final_df = programs_df.drop(columns=drop_columns)
 
         # 出力
         print(f"=== {output_path}として保存中 ===")
