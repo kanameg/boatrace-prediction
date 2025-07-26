@@ -44,7 +44,7 @@ class ProgramConverter:
             "大村": "24",
         }
 
-        # 出力CSVのヘッダー
+        # 出力CSVのヘッダー（1行1人分）
         self.csv_headers = [
             "年",
             "月",
@@ -53,28 +53,21 @@ class ProgramConverter:
             "レース番号",
             "距離",
             "投票締切時間",
+            "枠番",
+            "選手登番",
+            "年齢",
+            "支部",
+            "体重",
+            "級別",
+            "全国勝率",
+            "全国2連率",
+            "当地勝率",
+            "当地2連率",
+            "モーター番号",
+            "モーター2連率",
+            "ボート番号",
+            "ボート2連率",
         ]
-
-        # 6艇分のカラムを追加
-        for i in range(1, 7):
-            boat_prefix = f"{i}艇_"
-            self.csv_headers.extend(
-                [
-                    f"{boat_prefix}選手登番",
-                    f"{boat_prefix}年齢",
-                    f"{boat_prefix}支部",
-                    f"{boat_prefix}体重",
-                    f"{boat_prefix}級別",
-                    f"{boat_prefix}全国勝率",
-                    f"{boat_prefix}全国2連率",
-                    f"{boat_prefix}当地勝率",
-                    f"{boat_prefix}当地2連率",
-                    f"{boat_prefix}モーター番号",
-                    f"{boat_prefix}モーター2連率",
-                    f"{boat_prefix}ボート番号",
-                    f"{boat_prefix}ボート2連率",
-                ]
-            )
 
     def extract_track_number(self, text: str) -> Optional[str]:
         """レース場名からレース場番号を抽出"""
@@ -309,45 +302,37 @@ class ProgramConverter:
                 if not file_exists:
                     writer.writerow(self.csv_headers)
 
-                # データを書き込み
+                # データを書き込み（1行1人分）
                 for race in races:
-                    row = [
-                        race["year"],
-                        race["month"],
-                        race["day"],
-                        race["track_number"],
-                        race["race_number"],
-                        race["distance"],
-                        race["time"],
-                    ]
-
-                    # 6艇分のデータを追加
+                    # 6艇分のデータを個別の行として書き込み
                     for boat_num in range(1, 7):
                         boat_key = str(boat_num)
                         if boat_key in race["boats"]:
                             boat = race["boats"][boat_key]
-                            row.extend(
-                                [
-                                    boat["player_id"],
-                                    boat["age"],
-                                    boat["branch"],
-                                    boat["weight"],
-                                    boat["class"],
-                                    boat["national_win_rate"],
-                                    boat["national_2nd_rate"],
-                                    boat["local_win_rate"],
-                                    boat["local_2nd_rate"],
-                                    boat["motor_number"],
-                                    boat["motor_2nd_rate"],
-                                    boat["boat_number_actual"],
-                                    boat["boat_2nd_rate"],
-                                ]
-                            )
-                        else:
-                            # データがない場合は空文字で埋める
-                            row.extend([""] * 12)
-
-                    writer.writerow(row)
+                            row = [
+                                race["year"],
+                                race["month"],
+                                race["day"],
+                                race["track_number"],
+                                race["race_number"],
+                                race["distance"],
+                                race["time"],
+                                boat_num,  # 枠番
+                                boat["player_id"],
+                                boat["age"],
+                                boat["branch"],
+                                boat["weight"],
+                                boat["class"],
+                                boat["national_win_rate"],
+                                boat["national_2nd_rate"],
+                                boat["local_win_rate"],
+                                boat["local_2nd_rate"],
+                                boat["motor_number"],
+                                boat["motor_2nd_rate"],
+                                boat["boat_number_actual"],
+                                boat["boat_2nd_rate"],
+                            ]
+                            writer.writerow(row)
 
             print(f"処理完了: {len(races)}レースのデータを変換しました")
             print(f"出力ファイル: {output_file}")
