@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# Programs CSV一括インポートスクリプト
+# 番組表データ一括インポートスクリプト
 # data/programs.csvをSQLite3データベースにインポートする
-# 新しい構造: 1艇1行のフォーマットに対応
 
 set -e
 
@@ -11,7 +10,7 @@ CSV_FILE="${SCRIPT_DIR}/../data/programs.csv"
 DB_FILE="${SCRIPT_DIR}/boat_race.db"
 SQL_FILE="${SCRIPT_DIR}/programs.sql"
 
-echo "=== Programs CSV一括インポート開始 ==="
+echo "=== 番組表データ一括インポート開始 ==="
 
 # CSVファイルの存在確認
 if [ ! -f "$CSV_FILE" ]; then
@@ -96,26 +95,24 @@ PERIOD_INFO=$(sqlite3 "$DB_FILE" "
 SELECT 
   MIN(year || '-' || printf('%02d', month) || '-' || printf('%02d', day)) as start_date,
   MAX(year || '-' || printf('%02d', month) || '-' || printf('%02d', day)) as end_date,
-  COUNT(DISTINCT year || '-' || printf('%02d', month) || '-' || printf('%02d', day)) as total_days
+  COUNT(DISTINCT year || month || day || venue_code || race_number) as total_races
 FROM programs;")
 
 echo "データ期間: $PERIOD_INFO"
 
-# 最新データのサンプル表示
+# サンプルデータの表示
 echo ""
-echo "最新データサンプル:"
+echo "サンプルデータ（最新3件）:"
 sqlite3 "$DB_FILE" "
 SELECT 
   year || '-' || printf('%02d', month) || '-' || printf('%02d', day) as date,
   venue_code as venue,
   race_number as race,
-  frame_number as frame,
   racer_number,
-  age,
-  class
+  boat_number
 FROM programs 
-ORDER BY year DESC, month DESC, day DESC, venue_code DESC, race_number DESC, frame_number ASC
+ORDER BY year DESC, month DESC, day DESC, venue_code DESC, race_number DESC 
 LIMIT 3;"
 
 echo ""
-echo "=== Programs CSV一括インポート完了 ==="
+echo "=== 番組表データ一括インポート完了 ==="
