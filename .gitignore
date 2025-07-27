@@ -3,5 +3,4 @@
 .coverage
 .venv
 __pycache__/
-model/
 db/boat_race.db
