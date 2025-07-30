@@ -1,195 +1,54 @@
 #!/bin/bash
-# data/racers.csvをSQLiteデータベースにインポートするスクリプト
 
-# データベースファイル
-DB_FILE="boat_race.db"
-CSV_FILE="../data/racers.csv"
-SQL_FILE="racers.sql"
+# レーサー期別成績データ一括インポートスクリプト
+# data/racers.csvをSQLite3データベースにインポートする
 
-echo "=== Racers CSVインポートスクリプト ==="
-echo "データベース: $DB_FILE"
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CSV_FILE="${SCRIPT_DIR}/../data/racers.csv"
+DB_FILE="${SCRIPT_DIR}/boat_race.db"
+SQL_FILE="${SCRIPT_DIR}/racers.sql"
+
+echo "=== レーサー期別成績データ一括インポート開始 ==="
+
+# CSVファイルの存在確認
+if [ ! -f "$CSV_FILE" ]; then
+    echo "エラー: $CSV_FILE が見つかりません"
+    exit 1
+fi
+
+# SQLファイルの存在確認
+if [ ! -f "$SQL_FILE" ]; then
+    echo "エラー: $SQL_FILE が見つかりません"
+    exit 1
+fi
+
 echo "CSVファイル: $CSV_FILE"
+echo "データベース: $DB_FILE"
 echo "SQLファイル: $SQL_FILE"
 
-# ファイル存在チェック
-if [ ! -f "$CSV_FILE" ]; then
-    echo "エラー: CSVファイルが見つかりません: $CSV_FILE"
-    exit 1
-fi
-
-if [ ! -f "$SQL_FILE" ]; then
-    echo "エラー: SQLファイルが見つかりません: $SQL_FILE"
-    exit 1
-fi
+# CSVの行数を確認
+CSV_LINES=$(wc -l < "$CSV_FILE")
+echo "CSVファイル行数: $CSV_LINES 行（ヘッダー含む）"
 
 # テーブル作成
+echo ""
 echo "テーブルを作成中..."
 sqlite3 "$DB_FILE" < "$SQL_FILE"
-
-if [ $? -ne 0 ]; then
-    echo "エラー: テーブル作成に失敗しました"
-    exit 1
-fi
+echo "テーブル作成完了"
 
 # CSVデータをインポート
+echo ""
 echo "CSVデータをインポート中..."
+
 sqlite3 "$DB_FILE" <<EOF
--- 一時テーブル作成
-DROP TABLE IF EXISTS temp_racers;
-CREATE TABLE temp_racers (
-  年 TEXT,
-  期 TEXT,
-  登番 TEXT,
-  名前漢字 TEXT,
-  名前カナ TEXT,
-  支部 TEXT,
-  級 TEXT,
-  年号 TEXT,
-  生年月日 TEXT,
-  性別 TEXT,
-  年齢 TEXT,
-  身長 TEXT,
-  体重 TEXT,
-  血液型 TEXT,
-  勝率 TEXT,
-  複勝率 TEXT,
-  '1着回数' TEXT,
-  '2着回数' TEXT,
-  出走回数 TEXT,
-  優出回数 TEXT,
-  優勝回数 TEXT,
-  平均スタートタイミング TEXT,
-  '1コース進入回数' TEXT,
-  '1コース複勝率' TEXT,
-  '1コース平均スタートタイミング' TEXT,
-  '1コース平均スタート順位' TEXT,
-  '2コース進入回数' TEXT,
-  '2コース複勝率' TEXT,
-  '2コース平均スタートタイミング' TEXT,
-  '2コース平均スタート順位' TEXT,
-  '3コース進入回数' TEXT,
-  '3コース複勝率' TEXT,
-  '3コース平均スタートタイミング' TEXT,
-  '3コース平均スタート順位' TEXT,
-  '4コース進入回数' TEXT,
-  '4コース複勝率' TEXT,
-  '4コース平均スタートタイミング' TEXT,
-  '4コース平均スタート順位' TEXT,
-  '5コース進入回数' TEXT,
-  '5コース複勝率' TEXT,
-  '5コース平均スタートタイミング' TEXT,
-  '5コース平均スタート順位' TEXT,
-  '6コース進入回数' TEXT,
-  '6コース複勝率' TEXT,
-  '6コース平均スタートタイミング' TEXT,
-  '6コース平均スタート順位' TEXT,
-  前期級 TEXT,
-  前々期級 TEXT,
-  前々々期級 TEXT,
-  前期能力指数 TEXT,
-  今期能力指数 TEXT,
-  年2 TEXT,
-  期2 TEXT,
-  算出期間自 TEXT,
-  算出期間至 TEXT,
-  養成期 TEXT,
-  '1コース1着回数' TEXT,
-  '1コース2着回数' TEXT,
-  '1コース3着回数' TEXT,
-  '1コース4着回数' TEXT,
-  '1コース5着回数' TEXT,
-  '1コース6着回数' TEXT,
-  '1コースF回数' TEXT,
-  '1コースL0回数' TEXT,
-  '1コースL1回数' TEXT,
-  '1コースK0回数' TEXT,
-  '1コースK1回数' TEXT,
-  '1コースS0回数' TEXT,
-  '1コースS1回数' TEXT,
-  '1コースS2回数' TEXT,
-  '2コース1着回数' TEXT,
-  '2コース2着回数' TEXT,
-  '2コース3着回数' TEXT,
-  '2コース4着回数' TEXT,
-  '2コース5着回数' TEXT,
-  '2コース6着回数' TEXT,
-  '2コースF回数' TEXT,
-  '2コースL0回数' TEXT,
-  '2コースL1回数' TEXT,
-  '2コースK0回数' TEXT,
-  '2コースK1回数' TEXT,
-  '2コースS0回数' TEXT,
-  '2コースS1回数' TEXT,
-  '2コースS2回数' TEXT,
-  '3コース1着回数' TEXT,
-  '3コース2着回数' TEXT,
-  '3コース3着回数' TEXT,
-  '3コース4着回数' TEXT,
-  '3コース5着回数' TEXT,
-  '3コース6着回数' TEXT,
-  '3コースF回数' TEXT,
-  '3コースL0回数' TEXT,
-  '3コースL1回数' TEXT,
-  '3コースK0回数' TEXT,
-  '3コースK1回数' TEXT,
-  '3コースS0回数' TEXT,
-  '3コースS1回数' TEXT,
-  '3コースS2回数' TEXT,
-  '4コース1着回数' TEXT,
-  '4コース2着回数' TEXT,
-  '4コース3着回数' TEXT,
-  '4コース4着回数' TEXT,
-  '4コース5着回数' TEXT,
-  '4コース6着回数' TEXT,
-  '4コースF回数' TEXT,
-  '4コースL0回数' TEXT,
-  '4コースL1回数' TEXT,
-  '4コースK0回数' TEXT,
-  '4コースK1回数' TEXT,
-  '4コースS0回数' TEXT,
-  '4コースS1回数' TEXT,
-  '4コースS2回数' TEXT,
-  '5コース1着回数' TEXT,
-  '5コース2着回数' TEXT,
-  '5コース3着回数' TEXT,
-  '5コース4着回数' TEXT,
-  '5コース5着回数' TEXT,
-  '5コース6着回数' TEXT,
-  '5コースF回数' TEXT,
-  '5コースL0回数' TEXT,
-  '5コースL1回数' TEXT,
-  '5コースK0回数' TEXT,
-  '5コースK1回数' TEXT,
-  '5コースS0回数' TEXT,
-  '5コースS1回数' TEXT,
-  '5コースS2回数' TEXT,
-  '6コース1着回数' TEXT,
-  '6コース2着回数' TEXT,
-  '6コース3着回数' TEXT,
-  '6コース4着回数' TEXT,
-  '6コース5着回数' TEXT,
-  '6コース6着回数' TEXT,
-  '6コースF回数' TEXT,
-  '6コースL0回数' TEXT,
-  '6コースL1回数' TEXT,
-  '6コースK0回数' TEXT,
-  '6コースK1回数' TEXT,
-  '6コースS0回数' TEXT,
-  '6コースS1回数' TEXT,
-  '6コースS2回数' TEXT,
-  'コースなしL0回数' TEXT,
-  'コースなしL1回数' TEXT,
-  'コースなしK0回数' TEXT,
-  'コースなしK1回数' TEXT,
-  出身地 TEXT
-);
-
 .mode csv
-.headers off
-.import $CSV_FILE temp_racers
+.headers on
+.import '$CSV_FILE' temp_racers
 
--- 一時テーブルから本テーブルにデータを移行
-INSERT INTO racers (
+-- temp_racersから本テーブルにデータを変換・挿入
+INSERT OR IGNORE INTO racers (
   year, period, racer_number, name_kanji, name_kana, branch, class, year_name, birth_date, gender,
   age, height, weight, blood_type, win_rate, quinella_rate, first_place_count, second_place_count,
   total_races, excellent_race_count, victory_count, avg_start_timing,
@@ -201,7 +60,7 @@ INSERT INTO racers (
   course6_entries, course6_quinella_rate, course6_avg_start_timing, course6_avg_start_order,
   previous_class, previous_previous_class, previous_previous_previous_class,
   previous_ability_index, current_ability_index,
-  calculation_year, calculation_period, calculation_start_date, calculation_end_date, training_period,
+  calculation_start_date, calculation_end_date, training_period,
   course1_1st, course1_2nd, course1_3rd, course1_4th, course1_5th, course1_6th,
   course1_f, course1_l0, course1_l1, course1_k0, course1_k1, course1_s0, course1_s1, course1_s2,
   course2_1st, course2_2nd, course2_3rd, course2_4th, course2_5th, course2_6th,
@@ -228,145 +87,161 @@ SELECT
   血液型,
   CASE WHEN 勝率 = '' OR 勝率 IS NULL THEN NULL ELSE CAST(勝率 AS REAL) END,
   CASE WHEN 複勝率 = '' OR 複勝率 IS NULL THEN NULL ELSE CAST(複勝率 AS REAL) END,
-  CASE WHEN \`1着回数\` = '' OR \`1着回数\` IS NULL THEN NULL ELSE CAST(\`1着回数\` AS INTEGER) END,
-  CASE WHEN \`2着回数\` = '' OR \`2着回数\` IS NULL THEN NULL ELSE CAST(\`2着回数\` AS INTEGER) END,
+  CASE WHEN "1着回数" = '' OR "1着回数" IS NULL THEN NULL ELSE CAST("1着回数" AS INTEGER) END,
+  CASE WHEN "2着回数" = '' OR "2着回数" IS NULL THEN NULL ELSE CAST("2着回数" AS INTEGER) END,
   CASE WHEN 出走回数 = '' OR 出走回数 IS NULL THEN NULL ELSE CAST(出走回数 AS INTEGER) END,
   CASE WHEN 優出回数 = '' OR 優出回数 IS NULL THEN NULL ELSE CAST(優出回数 AS INTEGER) END,
   CASE WHEN 優勝回数 = '' OR 優勝回数 IS NULL THEN NULL ELSE CAST(優勝回数 AS INTEGER) END,
   CASE WHEN 平均スタートタイミング = '' OR 平均スタートタイミング IS NULL THEN NULL ELSE CAST(平均スタートタイミング AS REAL) END,
-  CASE WHEN \`1コース進入回数\` = '' OR \`1コース進入回数\` IS NULL THEN NULL ELSE CAST(\`1コース進入回数\` AS INTEGER) END,
-  CASE WHEN \`1コース複勝率\` = '' OR \`1コース複勝率\` IS NULL THEN NULL ELSE CAST(\`1コース複勝率\` AS REAL) END,
-  CASE WHEN \`1コース平均スタートタイミング\` = '' OR \`1コース平均スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`1コース平均スタートタイミング\` AS REAL) END,
-  CASE WHEN \`1コース平均スタート順位\` = '' OR \`1コース平均スタート順位\` IS NULL THEN NULL ELSE CAST(\`1コース平均スタート順位\` AS REAL) END,
-  CASE WHEN \`2コース進入回数\` = '' OR \`2コース進入回数\` IS NULL THEN NULL ELSE CAST(\`2コース進入回数\` AS INTEGER) END,
-  CASE WHEN \`2コース複勝率\` = '' OR \`2コース複勝率\` IS NULL THEN NULL ELSE CAST(\`2コース複勝率\` AS REAL) END,
-  CASE WHEN \`2コース平均スタートタイミング\` = '' OR \`2コース平均スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`2コース平均スタートタイミング\` AS REAL) END,
-  CASE WHEN \`2コース平均スタート順位\` = '' OR \`2コース平均スタート順位\` IS NULL THEN NULL ELSE CAST(\`2コース平均スタート順位\` AS REAL) END,
-  CASE WHEN \`3コース進入回数\` = '' OR \`3コース進入回数\` IS NULL THEN NULL ELSE CAST(\`3コース進入回数\` AS INTEGER) END,
-  CASE WHEN \`3コース複勝率\` = '' OR \`3コース複勝率\` IS NULL THEN NULL ELSE CAST(\`3コース複勝率\` AS REAL) END,
-  CASE WHEN \`3コース平均スタートタイミング\` = '' OR \`3コース平均スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`3コース平均スタートタイミング\` AS REAL) END,
-  CASE WHEN \`3コース平均スタート順位\` = '' OR \`3コース平均スタート順位\` IS NULL THEN NULL ELSE CAST(\`3コース平均スタート順位\` AS REAL) END,
-  CASE WHEN \`4コース進入回数\` = '' OR \`4コース進入回数\` IS NULL THEN NULL ELSE CAST(\`4コース進入回数\` AS INTEGER) END,
-  CASE WHEN \`4コース複勝率\` = '' OR \`4コース複勝率\` IS NULL THEN NULL ELSE CAST(\`4コース複勝率\` AS REAL) END,
-  CASE WHEN \`4コース平均スタートタイミング\` = '' OR \`4コース平均スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`4コース平均スタートタイミング\` AS REAL) END,
-  CASE WHEN \`4コース平均スタート順位\` = '' OR \`4コース平均スタート順位\` IS NULL THEN NULL ELSE CAST(\`4コース平均スタート順位\` AS REAL) END,
-  CASE WHEN \`5コース進入回数\` = '' OR \`5コース進入回数\` IS NULL THEN NULL ELSE CAST(\`5コース進入回数\` AS INTEGER) END,
-  CASE WHEN \`5コース複勝率\` = '' OR \`5コース複勝率\` IS NULL THEN NULL ELSE CAST(\`5コース複勝率\` AS REAL) END,
-  CASE WHEN \`5コース平均スタートタイミング\` = '' OR \`5コース平均スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`5コース平均スタートタイミング\` AS REAL) END,
-  CASE WHEN \`5コース平均スタート順位\` = '' OR \`5コース平均スタート順位\` IS NULL THEN NULL ELSE CAST(\`5コース平均スタート順位\` AS REAL) END,
-  CASE WHEN \`6コース進入回数\` = '' OR \`6コース進入回数\` IS NULL THEN NULL ELSE CAST(\`6コース進入回数\` AS INTEGER) END,
-  CASE WHEN \`6コース複勝率\` = '' OR \`6コース複勝率\` IS NULL THEN NULL ELSE CAST(\`6コース複勝率\` AS REAL) END,
-  CASE WHEN \`6コース平均スタートタイミング\` = '' OR \`6コース平均スタートタイミング\` IS NULL THEN NULL ELSE CAST(\`6コース平均スタートタイミング\` AS REAL) END,
-  CASE WHEN \`6コース平均スタート順位\` = '' OR \`6コース平均スタート順位\` IS NULL THEN NULL ELSE CAST(\`6コース平均スタート順位\` AS REAL) END,
+  CASE WHEN "1コース進入回数" = '' OR "1コース進入回数" IS NULL THEN NULL ELSE CAST("1コース進入回数" AS INTEGER) END,
+  CASE WHEN "1コース複勝率" = '' OR "1コース複勝率" IS NULL THEN NULL ELSE CAST("1コース複勝率" AS REAL) END,
+  CASE WHEN "1コース平均スタートタイミング" = '' OR "1コース平均スタートタイミング" IS NULL THEN NULL ELSE CAST("1コース平均スタートタイミング" AS REAL) END,
+  CASE WHEN "1コース平均スタート順位" = '' OR "1コース平均スタート順位" IS NULL THEN NULL ELSE CAST("1コース平均スタート順位" AS REAL) END,
+  CASE WHEN "2コース進入回数" = '' OR "2コース進入回数" IS NULL THEN NULL ELSE CAST("2コース進入回数" AS INTEGER) END,
+  CASE WHEN "2コース複勝率" = '' OR "2コース複勝率" IS NULL THEN NULL ELSE CAST("2コース複勝率" AS REAL) END,
+  CASE WHEN "2コース平均スタートタイミング" = '' OR "2コース平均スタートタイミング" IS NULL THEN NULL ELSE CAST("2コース平均スタートタイミング" AS REAL) END,
+  CASE WHEN "2コース平均スタート順位" = '' OR "2コース平均スタート順位" IS NULL THEN NULL ELSE CAST("2コース平均スタート順位" AS REAL) END,
+  CASE WHEN "3コース進入回数" = '' OR "3コース進入回数" IS NULL THEN NULL ELSE CAST("3コース進入回数" AS INTEGER) END,
+  CASE WHEN "3コース複勝率" = '' OR "3コース複勝率" IS NULL THEN NULL ELSE CAST("3コース複勝率" AS REAL) END,
+  CASE WHEN "3コース平均スタートタイミング" = '' OR "3コース平均スタートタイミング" IS NULL THEN NULL ELSE CAST("3コース平均スタートタイミング" AS REAL) END,
+  CASE WHEN "3コース平均スタート順位" = '' OR "3コース平均スタート順位" IS NULL THEN NULL ELSE CAST("3コース平均スタート順位" AS REAL) END,
+  CASE WHEN "4コース進入回数" = '' OR "4コース進入回数" IS NULL THEN NULL ELSE CAST("4コース進入回数" AS INTEGER) END,
+  CASE WHEN "4コース複勝率" = '' OR "4コース複勝率" IS NULL THEN NULL ELSE CAST("4コース複勝率" AS REAL) END,
+  CASE WHEN "4コース平均スタートタイミング" = '' OR "4コース平均スタートタイミング" IS NULL THEN NULL ELSE CAST("4コース平均スタートタイミング" AS REAL) END,
+  CASE WHEN "4コース平均スタート順位" = '' OR "4コース平均スタート順位" IS NULL THEN NULL ELSE CAST("4コース平均スタート順位" AS REAL) END,
+  CASE WHEN "5コース進入回数" = '' OR "5コース進入回数" IS NULL THEN NULL ELSE CAST("5コース進入回数" AS INTEGER) END,
+  CASE WHEN "5コース複勝率" = '' OR "5コース複勝率" IS NULL THEN NULL ELSE CAST("5コース複勝率" AS REAL) END,
+  CASE WHEN "5コース平均スタートタイミング" = '' OR "5コース平均スタートタイミング" IS NULL THEN NULL ELSE CAST("5コース平均スタートタイミング" AS REAL) END,
+  CASE WHEN "5コース平均スタート順位" = '' OR "5コース平均スタート順位" IS NULL THEN NULL ELSE CAST("5コース平均スタート順位" AS REAL) END,
+  CASE WHEN "6コース進入回数" = '' OR "6コース進入回数" IS NULL THEN NULL ELSE CAST("6コース進入回数" AS INTEGER) END,
+  CASE WHEN "6コース複勝率" = '' OR "6コース複勝率" IS NULL THEN NULL ELSE CAST("6コース複勝率" AS REAL) END,
+  CASE WHEN "6コース平均スタートタイミング" = '' OR "6コース平均スタートタイミング" IS NULL THEN NULL ELSE CAST("6コース平均スタートタイミング" AS REAL) END,
+  CASE WHEN "6コース平均スタート順位" = '' OR "6コース平均スタート順位" IS NULL THEN NULL ELSE CAST("6コース平均スタート順位" AS REAL) END,
   前期級, 前々期級, 前々々期級,
-  CASE WHEN 前期能力指数 = '' OR 前期能力指数 IS NULL THEN NULL ELSE CAST(前期能力指数 AS REAL) END,
-  CASE WHEN 今期能力指数 = '' OR 今期能力指数 IS NULL THEN NULL ELSE CAST(今期能力指数 AS REAL) END,
-  CASE WHEN 年2 = '' OR 年2 IS NULL THEN NULL ELSE CAST(年2 AS INTEGER) END,
-  期2, 算出期間自, 算出期間至,
-  CASE WHEN 養成期 = '' OR 養成期 IS NULL THEN NULL ELSE CAST(養成期 AS INTEGER) END,
-  CASE WHEN \`1コース1着回数\` = '' OR \`1コース1着回数\` IS NULL THEN NULL ELSE CAST(\`1コース1着回数\` AS INTEGER) END,
-  CASE WHEN \`1コース2着回数\` = '' OR \`1コース2着回数\` IS NULL THEN NULL ELSE CAST(\`1コース2着回数\` AS INTEGER) END,
-  CASE WHEN \`1コース3着回数\` = '' OR \`1コース3着回数\` IS NULL THEN NULL ELSE CAST(\`1コース3着回数\` AS INTEGER) END,
-  CASE WHEN \`1コース4着回数\` = '' OR \`1コース4着回数\` IS NULL THEN NULL ELSE CAST(\`1コース4着回数\` AS INTEGER) END,
-  CASE WHEN \`1コース5着回数\` = '' OR \`1コース5着回数\` IS NULL THEN NULL ELSE CAST(\`1コース5着回数\` AS INTEGER) END,
-  CASE WHEN \`1コース6着回数\` = '' OR \`1コース6着回数\` IS NULL THEN NULL ELSE CAST(\`1コース6着回数\` AS INTEGER) END,
-  CASE WHEN \`1コースF回数\` = '' OR \`1コースF回数\` IS NULL THEN NULL ELSE CAST(\`1コースF回数\` AS INTEGER) END,
-  CASE WHEN \`1コースL0回数\` = '' OR \`1コースL0回数\` IS NULL THEN NULL ELSE CAST(\`1コースL0回数\` AS INTEGER) END,
-  CASE WHEN \`1コースL1回数\` = '' OR \`1コースL1回数\` IS NULL THEN NULL ELSE CAST(\`1コースL1回数\` AS INTEGER) END,
-  CASE WHEN \`1コースK0回数\` = '' OR \`1コースK0回数\` IS NULL THEN NULL ELSE CAST(\`1コースK0回数\` AS INTEGER) END,
-  CASE WHEN \`1コースK1回数\` = '' OR \`1コースK1回数\` IS NULL THEN NULL ELSE CAST(\`1コースK1回数\` AS INTEGER) END,
-  CASE WHEN \`1コースS0回数\` = '' OR \`1コースS0回数\` IS NULL THEN NULL ELSE CAST(\`1コースS0回数\` AS INTEGER) END,
-  CASE WHEN \`1コースS1回数\` = '' OR \`1コースS1回数\` IS NULL THEN NULL ELSE CAST(\`1コースS1回数\` AS INTEGER) END,
-  CASE WHEN \`1コースS2回数\` = '' OR \`1コースS2回数\` IS NULL THEN NULL ELSE CAST(\`1コースS2回数\` AS INTEGER) END,
-  CASE WHEN \`2コース1着回数\` = '' OR \`2コース1着回数\` IS NULL THEN NULL ELSE CAST(\`2コース1着回数\` AS INTEGER) END,
-  CASE WHEN \`2コース2着回数\` = '' OR \`2コース2着回数\` IS NULL THEN NULL ELSE CAST(\`2コース2着回数\` AS INTEGER) END,
-  CASE WHEN \`2コース3着回数\` = '' OR \`2コース3着回数\` IS NULL THEN NULL ELSE CAST(\`2コース3着回数\` AS INTEGER) END,
-  CASE WHEN \`2コース4着回数\` = '' OR \`2コース4着回数\` IS NULL THEN NULL ELSE CAST(\`2コース4着回数\` AS INTEGER) END,
-  CASE WHEN \`2コース5着回数\` = '' OR \`2コース5着回数\` IS NULL THEN NULL ELSE CAST(\`2コース5着回数\` AS INTEGER) END,
-  CASE WHEN \`2コース6着回数\` = '' OR \`2コース6着回数\` IS NULL THEN NULL ELSE CAST(\`2コース6着回数\` AS INTEGER) END,
-  CASE WHEN \`2コースF回数\` = '' OR \`2コースF回数\` IS NULL THEN NULL ELSE CAST(\`2コースF回数\` AS INTEGER) END,
-  CASE WHEN \`2コースL0回数\` = '' OR \`2コースL0回数\` IS NULL THEN NULL ELSE CAST(\`2コースL0回数\` AS INTEGER) END,
-  CASE WHEN \`2コースL1回数\` = '' OR \`2コースL1回数\` IS NULL THEN NULL ELSE CAST(\`2コースL1回数\` AS INTEGER) END,
-  CASE WHEN \`2コースK0回数\` = '' OR \`2コースK0回数\` IS NULL THEN NULL ELSE CAST(\`2コースK0回数\` AS INTEGER) END,
-  CASE WHEN \`2コースK1回数\` = '' OR \`2コースK1回数\` IS NULL THEN NULL ELSE CAST(\`2コースK1回数\` AS INTEGER) END,
-  CASE WHEN \`2コースS0回数\` = '' OR \`2コースS0回数\` IS NULL THEN NULL ELSE CAST(\`2コースS0回数\` AS INTEGER) END,
-  CASE WHEN \`2コースS1回数\` = '' OR \`2コースS1回数\` IS NULL THEN NULL ELSE CAST(\`2コースS1回数\` AS INTEGER) END,
-  CASE WHEN \`2コースS2回数\` = '' OR \`2コースS2回数\` IS NULL THEN NULL ELSE CAST(\`2コースS2回数\` AS INTEGER) END,
-  CASE WHEN \`3コース1着回数\` = '' OR \`3コース1着回数\` IS NULL THEN NULL ELSE CAST(\`3コース1着回数\` AS INTEGER) END,
-  CASE WHEN \`3コース2着回数\` = '' OR \`3コース2着回数\` IS NULL THEN NULL ELSE CAST(\`3コース2着回数\` AS INTEGER) END,
-  CASE WHEN \`3コース3着回数\` = '' OR \`3コース3着回数\` IS NULL THEN NULL ELSE CAST(\`3コース3着回数\` AS INTEGER) END,
-  CASE WHEN \`3コース4着回数\` = '' OR \`3コース4着回数\` IS NULL THEN NULL ELSE CAST(\`3コース4着回数\` AS INTEGER) END,
-  CASE WHEN \`3コース5着回数\` = '' OR \`3コース5着回数\` IS NULL THEN NULL ELSE CAST(\`3コース5着回数\` AS INTEGER) END,
-  CASE WHEN \`3コース6着回数\` = '' OR \`3コース6着回数\` IS NULL THEN NULL ELSE CAST(\`3コース6着回数\` AS INTEGER) END,
-  CASE WHEN \`3コースF回数\` = '' OR \`3コースF回数\` IS NULL THEN NULL ELSE CAST(\`3コースF回数\` AS INTEGER) END,
-  CASE WHEN \`3コースL0回数\` = '' OR \`3コースL0回数\` IS NULL THEN NULL ELSE CAST(\`3コースL0回数\` AS INTEGER) END,
-  CASE WHEN \`3コースL1回数\` = '' OR \`3コースL1回数\` IS NULL THEN NULL ELSE CAST(\`3コースL1回数\` AS INTEGER) END,
-  CASE WHEN \`3コースK0回数\` = '' OR \`3コースK0回数\` IS NULL THEN NULL ELSE CAST(\`3コースK0回数\` AS INTEGER) END,
-  CASE WHEN \`3コースK1回数\` = '' OR \`3コースK1回数\` IS NULL THEN NULL ELSE CAST(\`3コースK1回数\` AS INTEGER) END,
-  CASE WHEN \`3コースS0回数\` = '' OR \`3コースS0回数\` IS NULL THEN NULL ELSE CAST(\`3コースS0回数\` AS INTEGER) END,
-  CASE WHEN \`3コースS1回数\` = '' OR \`3コースS1回数\` IS NULL THEN NULL ELSE CAST(\`3コースS1回数\` AS INTEGER) END,
-  CASE WHEN \`3コースS2回数\` = '' OR \`3コースS2回数\` IS NULL THEN NULL ELSE CAST(\`3コースS2回数\` AS INTEGER) END,
-  CASE WHEN \`4コース1着回数\` = '' OR \`4コース1着回数\` IS NULL THEN NULL ELSE CAST(\`4コース1着回数\` AS INTEGER) END,
-  CASE WHEN \`4コース2着回数\` = '' OR \`4コース2着回数\` IS NULL THEN NULL ELSE CAST(\`4コース2着回数\` AS INTEGER) END,
-  CASE WHEN \`4コース3着回数\` = '' OR \`4コース3着回数\` IS NULL THEN NULL ELSE CAST(\`4コース3着回数\` AS INTEGER) END,
-  CASE WHEN \`4コース4着回数\` = '' OR \`4コース4着回数\` IS NULL THEN NULL ELSE CAST(\`4コース4着回数\` AS INTEGER) END,
-  CASE WHEN \`4コース5着回数\` = '' OR \`4コース5着回数\` IS NULL THEN NULL ELSE CAST(\`4コース5着回数\` AS INTEGER) END,
-  CASE WHEN \`4コース6着回数\` = '' OR \`4コース6着回数\` IS NULL THEN NULL ELSE CAST(\`4コース6着回数\` AS INTEGER) END,
-  CASE WHEN \`4コースF回数\` = '' OR \`4コースF回数\` IS NULL THEN NULL ELSE CAST(\`4コースF回数\` AS INTEGER) END,
-  CASE WHEN \`4コースL0回数\` = '' OR \`4コースL0回数\` IS NULL THEN NULL ELSE CAST(\`4コースL0回数\` AS INTEGER) END,
-  CASE WHEN \`4コースL1回数\` = '' OR \`4コースL1回数\` IS NULL THEN NULL ELSE CAST(\`4コースL1回数\` AS INTEGER) END,
-  CASE WHEN \`4コースK0回数\` = '' OR \`4コースK0回数\` IS NULL THEN NULL ELSE CAST(\`4コースK0回数\` AS INTEGER) END,
-  CASE WHEN \`4コースK1回数\` = '' OR \`4コースK1回数\` IS NULL THEN NULL ELSE CAST(\`4コースK1回数\` AS INTEGER) END,
-  CASE WHEN \`4コースS0回数\` = '' OR \`4コースS0回数\` IS NULL THEN NULL ELSE CAST(\`4コースS0回数\` AS INTEGER) END,
-  CASE WHEN \`4コースS1回数\` = '' OR \`4コースS1回数\` IS NULL THEN NULL ELSE CAST(\`4コースS1回数\` AS INTEGER) END,
-  CASE WHEN \`4コースS2回数\` = '' OR \`4コースS2回数\` IS NULL THEN NULL ELSE CAST(\`4コースS2回数\` AS INTEGER) END,
-  CASE WHEN \`5コース1着回数\` = '' OR \`5コース1着回数\` IS NULL THEN NULL ELSE CAST(\`5コース1着回数\` AS INTEGER) END,
-  CASE WHEN \`5コース2着回数\` = '' OR \`5コース2着回数\` IS NULL THEN NULL ELSE CAST(\`5コース2着回数\` AS INTEGER) END,
-  CASE WHEN \`5コース3着回数\` = '' OR \`5コース3着回数\` IS NULL THEN NULL ELSE CAST(\`5コース3着回数\` AS INTEGER) END,
-  CASE WHEN \`5コース4着回数\` = '' OR \`5コース4着回数\` IS NULL THEN NULL ELSE CAST(\`5コース4着回数\` AS INTEGER) END,
-  CASE WHEN \`5コース5着回数\` = '' OR \`5コース5着回数\` IS NULL THEN NULL ELSE CAST(\`5コース5着回数\` AS INTEGER) END,
-  CASE WHEN \`5コース6着回数\` = '' OR \`5コース6着回数\` IS NULL THEN NULL ELSE CAST(\`5コース6着回数\` AS INTEGER) END,
-  CASE WHEN \`5コースF回数\` = '' OR \`5コースF回数\` IS NULL THEN NULL ELSE CAST(\`5コースF回数\` AS INTEGER) END,
-  CASE WHEN \`5コースL0回数\` = '' OR \`5コースL0回数\` IS NULL THEN NULL ELSE CAST(\`5コースL0回数\` AS INTEGER) END,
-  CASE WHEN \`5コースL1回数\` = '' OR \`5コースL1回数\` IS NULL THEN NULL ELSE CAST(\`5コースL1回数\` AS INTEGER) END,
-  CASE WHEN \`5コースK0回数\` = '' OR \`5コースK0回数\` IS NULL THEN NULL ELSE CAST(\`5コースK0回数\` AS INTEGER) END,
-  CASE WHEN \`5コースK1回数\` = '' OR \`5コースK1回数\` IS NULL THEN NULL ELSE CAST(\`5コースK1回数\` AS INTEGER) END,
-  CASE WHEN \`5コースS0回数\` = '' OR \`5コースS0回数\` IS NULL THEN NULL ELSE CAST(\`5コースS0回数\` AS INTEGER) END,
-  CASE WHEN \`5コースS1回数\` = '' OR \`5コースS1回数\` IS NULL THEN NULL ELSE CAST(\`5コースS1回数\` AS INTEGER) END,
-  CASE WHEN \`5コースS2回数\` = '' OR \`5コースS2回数\` IS NULL THEN NULL ELSE CAST(\`5コースS2回数\` AS INTEGER) END,
-  CASE WHEN \`6コース1着回数\` = '' OR \`6コース1着回数\` IS NULL THEN NULL ELSE CAST(\`6コース1着回数\` AS INTEGER) END,
-  CASE WHEN \`6コース2着回数\` = '' OR \`6コース2着回数\` IS NULL THEN NULL ELSE CAST(\`6コース2着回数\` AS INTEGER) END,
-  CASE WHEN \`6コース3着回数\` = '' OR \`6コース3着回数\` IS NULL THEN NULL ELSE CAST(\`6コース3着回数\` AS INTEGER) END,
-  CASE WHEN \`6コース4着回数\` = '' OR \`6コース4着回数\` IS NULL THEN NULL ELSE CAST(\`6コース4着回数\` AS INTEGER) END,
-  CASE WHEN \`6コース5着回数\` = '' OR \`6コース5着回数\` IS NULL THEN NULL ELSE CAST(\`6コース5着回数\` AS INTEGER) END,
-  CASE WHEN \`6コース6着回数\` = '' OR \`6コース6着回数\` IS NULL THEN NULL ELSE CAST(\`6コース6着回数\` AS INTEGER) END,
-  CASE WHEN \`6コースF回数\` = '' OR \`6コースF回数\` IS NULL THEN NULL ELSE CAST(\`6コースF回数\` AS INTEGER) END,
-  CASE WHEN \`6コースL0回数\` = '' OR \`6コースL0回数\` IS NULL THEN NULL ELSE CAST(\`6コースL0回数\` AS INTEGER) END,
-  CASE WHEN \`6コースL1回数\` = '' OR \`6コースL1回数\` IS NULL THEN NULL ELSE CAST(\`6コースL1回数\` AS INTEGER) END,
-  CASE WHEN \`6コースK0回数\` = '' OR \`6コースK0回数\` IS NULL THEN NULL ELSE CAST(\`6コースK0回数\` AS INTEGER) END,
-  CASE WHEN \`6コースK1回数\` = '' OR \`6コースK1回数\` IS NULL THEN NULL ELSE CAST(\`6コースK1回数\` AS INTEGER) END,
-  CASE WHEN \`6コースS0回数\` = '' OR \`6コースS0回数\` IS NULL THEN NULL ELSE CAST(\`6コースS0回数\` AS INTEGER) END,
-  CASE WHEN \`6コースS1回数\` = '' OR \`6コースS1回数\` IS NULL THEN NULL ELSE CAST(\`6コースS1回数\` AS INTEGER) END,
-  CASE WHEN \`6コースS2回数\` = '' OR \`6コースS2回数\` IS NULL THEN NULL ELSE CAST(\`6コースS2回数\` AS INTEGER) END,
-  CASE WHEN \`コースなしL0回数\` = '' OR \`コースなしL0回数\` IS NULL THEN NULL ELSE CAST(\`コースなしL0回数\` AS INTEGER) END,
-  CASE WHEN \`コースなしL1回数\` = '' OR \`コースなしL1回数\` IS NULL THEN NULL ELSE CAST(\`コースなしL1回数\` AS INTEGER) END,
-  CASE WHEN \`コースなしK0回数\` = '' OR \`コースなしK0回数\` IS NULL THEN NULL ELSE CAST(\`コースなしK0回数\` AS INTEGER) END,
-  CASE WHEN \`コースなしK1回数\` = '' OR \`コースなしK1回数\` IS NULL THEN NULL ELSE CAST(\`コースなしK1回数\` AS INTEGER) END,
+  前期能力指数, 今期能力指数,
+  算出期間自, 算出期間至, 養成期,
+  CASE WHEN "1コース1着" = '' OR "1コース1着" IS NULL THEN NULL ELSE CAST("1コース1着" AS INTEGER) END,
+  CASE WHEN "1コース2着" = '' OR "1コース2着" IS NULL THEN NULL ELSE CAST("1コース2着" AS INTEGER) END,
+  CASE WHEN "1コース3着" = '' OR "1コース3着" IS NULL THEN NULL ELSE CAST("1コース3着" AS INTEGER) END,
+  CASE WHEN "1コース4着" = '' OR "1コース4着" IS NULL THEN NULL ELSE CAST("1コース4着" AS INTEGER) END,
+  CASE WHEN "1コース5着" = '' OR "1コース5着" IS NULL THEN NULL ELSE CAST("1コース5着" AS INTEGER) END,
+  CASE WHEN "1コース6着" = '' OR "1コース6着" IS NULL THEN NULL ELSE CAST("1コース6着" AS INTEGER) END,
+  CASE WHEN "1コースF" = '' OR "1コースF" IS NULL THEN NULL ELSE CAST("1コースF" AS INTEGER) END,
+  CASE WHEN "1コースL0" = '' OR "1コースL0" IS NULL THEN NULL ELSE CAST("1コースL0" AS INTEGER) END,
+  CASE WHEN "1コースL1" = '' OR "1コースL1" IS NULL THEN NULL ELSE CAST("1コースL1" AS INTEGER) END,
+  CASE WHEN "1コースK0" = '' OR "1コースK0" IS NULL THEN NULL ELSE CAST("1コースK0" AS INTEGER) END,
+  CASE WHEN "1コースK1" = '' OR "1コースK1" IS NULL THEN NULL ELSE CAST("1コースK1" AS INTEGER) END,
+  CASE WHEN "1コースS0" = '' OR "1コースS0" IS NULL THEN NULL ELSE CAST("1コースS0" AS INTEGER) END,
+  CASE WHEN "1コースS1" = '' OR "1コースS1" IS NULL THEN NULL ELSE CAST("1コースS1" AS INTEGER) END,
+  CASE WHEN "1コースS2" = '' OR "1コースS2" IS NULL THEN NULL ELSE CAST("1コースS2" AS INTEGER) END,
+  CASE WHEN "2コース1着" = '' OR "2コース1着" IS NULL THEN NULL ELSE CAST("2コース1着" AS INTEGER) END,
+  CASE WHEN "2コース2着" = '' OR "2コース2着" IS NULL THEN NULL ELSE CAST("2コース2着" AS INTEGER) END,
+  CASE WHEN "2コース3着" = '' OR "2コース3着" IS NULL THEN NULL ELSE CAST("2コース3着" AS INTEGER) END,
+  CASE WHEN "2コース4着" = '' OR "2コース4着" IS NULL THEN NULL ELSE CAST("2コース4着" AS INTEGER) END,
+  CASE WHEN "2コース5着" = '' OR "2コース5着" IS NULL THEN NULL ELSE CAST("2コース5着" AS INTEGER) END,
+  CASE WHEN "2コース6着" = '' OR "2コース6着" IS NULL THEN NULL ELSE CAST("2コース6着" AS INTEGER) END,
+  CASE WHEN "2コースF" = '' OR "2コースF" IS NULL THEN NULL ELSE CAST("2コースF" AS INTEGER) END,
+  CASE WHEN "2コースL0" = '' OR "2コースL0" IS NULL THEN NULL ELSE CAST("2コースL0" AS INTEGER) END,
+  CASE WHEN "2コースL1" = '' OR "2コースL1" IS NULL THEN NULL ELSE CAST("2コースL1" AS INTEGER) END,
+  CASE WHEN "2コースK0" = '' OR "2コースK0" IS NULL THEN NULL ELSE CAST("2コースK0" AS INTEGER) END,
+  CASE WHEN "2コースK1" = '' OR "2コースK1" IS NULL THEN NULL ELSE CAST("2コースK1" AS INTEGER) END,
+  CASE WHEN "2コースS0" = '' OR "2コースS0" IS NULL THEN NULL ELSE CAST("2コースS0" AS INTEGER) END,
+  CASE WHEN "2コースS1" = '' OR "2コースS1" IS NULL THEN NULL ELSE CAST("2コースS1" AS INTEGER) END,
+  CASE WHEN "2コースS2" = '' OR "2コースS2" IS NULL THEN NULL ELSE CAST("2コースS2" AS INTEGER) END,
+  CASE WHEN "3コース1着" = '' OR "3コース1着" IS NULL THEN NULL ELSE CAST("3コース1着" AS INTEGER) END,
+  CASE WHEN "3コース2着" = '' OR "3コース2着" IS NULL THEN NULL ELSE CAST("3コース2着" AS INTEGER) END,
+  CASE WHEN "3コース3着" = '' OR "3コース3着" IS NULL THEN NULL ELSE CAST("3コース3着" AS INTEGER) END,
+  CASE WHEN "3コース4着" = '' OR "3コース4着" IS NULL THEN NULL ELSE CAST("3コース4着" AS INTEGER) END,
+  CASE WHEN "3コース5着" = '' OR "3コース5着" IS NULL THEN NULL ELSE CAST("3コース5着" AS INTEGER) END,
+  CASE WHEN "3コース6着" = '' OR "3コース6着" IS NULL THEN NULL ELSE CAST("3コース6着" AS INTEGER) END,
+  CASE WHEN "3コースF" = '' OR "3コースF" IS NULL THEN NULL ELSE CAST("3コースF" AS INTEGER) END,
+  CASE WHEN "3コースL0" = '' OR "3コースL0" IS NULL THEN NULL ELSE CAST("3コースL0" AS INTEGER) END,
+  CASE WHEN "3コースL1" = '' OR "3コースL1" IS NULL THEN NULL ELSE CAST("3コースL1" AS INTEGER) END,
+  CASE WHEN "3コースK0" = '' OR "3コースK0" IS NULL THEN NULL ELSE CAST("3コースK0" AS INTEGER) END,
+  CASE WHEN "3コースK1" = '' OR "3コースK1" IS NULL THEN NULL ELSE CAST("3コースK1" AS INTEGER) END,
+  CASE WHEN "3コースS0" = '' OR "3コースS0" IS NULL THEN NULL ELSE CAST("3コースS0" AS INTEGER) END,
+  CASE WHEN "3コースS1" = '' OR "3コースS1" IS NULL THEN NULL ELSE CAST("3コースS1" AS INTEGER) END,
+  CASE WHEN "3コースS2" = '' OR "3コースS2" IS NULL THEN NULL ELSE CAST("3コースS2" AS INTEGER) END,
+  CASE WHEN "4コース1着" = '' OR "4コース1着" IS NULL THEN NULL ELSE CAST("4コース1着" AS INTEGER) END,
+  CASE WHEN "4コース2着" = '' OR "4コース2着" IS NULL THEN NULL ELSE CAST("4コース2着" AS INTEGER) END,
+  CASE WHEN "4コース3着" = '' OR "4コース3着" IS NULL THEN NULL ELSE CAST("4コース3着" AS INTEGER) END,
+  CASE WHEN "4コース4着" = '' OR "4コース4着" IS NULL THEN NULL ELSE CAST("4コース4着" AS INTEGER) END,
+  CASE WHEN "4コース5着" = '' OR "4コース5着" IS NULL THEN NULL ELSE CAST("4コース5着" AS INTEGER) END,
+  CASE WHEN "4コース6着" = '' OR "4コース6着" IS NULL THEN NULL ELSE CAST("4コース6着" AS INTEGER) END,
+  CASE WHEN "4コースF" = '' OR "4コースF" IS NULL THEN NULL ELSE CAST("4コースF" AS INTEGER) END,
+  CASE WHEN "4コースL0" = '' OR "4コースL0" IS NULL THEN NULL ELSE CAST("4コースL0" AS INTEGER) END,
+  CASE WHEN "4コースL1" = '' OR "4コースL1" IS NULL THEN NULL ELSE CAST("4コースL1" AS INTEGER) END,
+  CASE WHEN "4コースK0" = '' OR "4コースK0" IS NULL THEN NULL ELSE CAST("4コースK0" AS INTEGER) END,
+  CASE WHEN "4コースK1" = '' OR "4コースK1" IS NULL THEN NULL ELSE CAST("4コースK1" AS INTEGER) END,
+  CASE WHEN "4コースS0" = '' OR "4コースS0" IS NULL THEN NULL ELSE CAST("4コースS0" AS INTEGER) END,
+  CASE WHEN "4コースS1" = '' OR "4コースS1" IS NULL THEN NULL ELSE CAST("4コースS1" AS INTEGER) END,
+  CASE WHEN "4コースS2" = '' OR "4コースS2" IS NULL THEN NULL ELSE CAST("4コースS2" AS INTEGER) END,
+  CASE WHEN "5コース1着" = '' OR "5コース1着" IS NULL THEN NULL ELSE CAST("5コース1着" AS INTEGER) END,
+  CASE WHEN "5コース2着" = '' OR "5コース2着" IS NULL THEN NULL ELSE CAST("5コース2着" AS INTEGER) END,
+  CASE WHEN "5コース3着" = '' OR "5コース3着" IS NULL THEN NULL ELSE CAST("5コース3着" AS INTEGER) END,
+  CASE WHEN "5コース4着" = '' OR "5コース4着" IS NULL THEN NULL ELSE CAST("5コース4着" AS INTEGER) END,
+  CASE WHEN "5コース5着" = '' OR "5コース5着" IS NULL THEN NULL ELSE CAST("5コース5着" AS INTEGER) END,
+  CASE WHEN "5コース6着" = '' OR "5コース6着" IS NULL THEN NULL ELSE CAST("5コース6着" AS INTEGER) END,
+  CASE WHEN "5コースF" = '' OR "5コースF" IS NULL THEN NULL ELSE CAST("5コースF" AS INTEGER) END,
+  CASE WHEN "5コースL0" = '' OR "5コースL0" IS NULL THEN NULL ELSE CAST("5コースL0" AS INTEGER) END,
+  CASE WHEN "5コースL1" = '' OR "5コースL1" IS NULL THEN NULL ELSE CAST("5コースL1" AS INTEGER) END,
+  CASE WHEN "5コースK0" = '' OR "5コースK0" IS NULL THEN NULL ELSE CAST("5コースK0" AS INTEGER) END,
+  CASE WHEN "5コースK1" = '' OR "5コースK1" IS NULL THEN NULL ELSE CAST("5コースK1" AS INTEGER) END,
+  CASE WHEN "5コースS0" = '' OR "5コースS0" IS NULL THEN NULL ELSE CAST("5コースS0" AS INTEGER) END,
+  CASE WHEN "5コースS1" = '' OR "5コースS1" IS NULL THEN NULL ELSE CAST("5コースS1" AS INTEGER) END,
+  CASE WHEN "5コースS2" = '' OR "5コースS2" IS NULL THEN NULL ELSE CAST("5コースS2" AS INTEGER) END,
+  CASE WHEN "6コース1着" = '' OR "6コース1着" IS NULL THEN NULL ELSE CAST("6コース1着" AS INTEGER) END,
+  CASE WHEN "6コース2着" = '' OR "6コース2着" IS NULL THEN NULL ELSE CAST("6コース2着" AS INTEGER) END,
+  CASE WHEN "6コース3着" = '' OR "6コース3着" IS NULL THEN NULL ELSE CAST("6コース3着" AS INTEGER) END,
+  CASE WHEN "6コース4着" = '' OR "6コース4着" IS NULL THEN NULL ELSE CAST("6コース4着" AS INTEGER) END,
+  CASE WHEN "6コース5着" = '' OR "6コース5着" IS NULL THEN NULL ELSE CAST("6コース5着" AS INTEGER) END,
+  CASE WHEN "6コース6着" = '' OR "6コース6着" IS NULL THEN NULL ELSE CAST("6コース6着" AS INTEGER) END,
+  CASE WHEN "6コースF" = '' OR "6コースF" IS NULL THEN NULL ELSE CAST("6コースF" AS INTEGER) END,
+  CASE WHEN "6コースL0" = '' OR "6コースL0" IS NULL THEN NULL ELSE CAST("6コースL0" AS INTEGER) END,
+  CASE WHEN "6コースL1" = '' OR "6コースL1" IS NULL THEN NULL ELSE CAST("6コースL1" AS INTEGER) END,
+  CASE WHEN "6コースK0" = '' OR "6コースK0" IS NULL THEN NULL ELSE CAST("6コースK0" AS INTEGER) END,
+  CASE WHEN "6コースK1" = '' OR "6コースK1" IS NULL THEN NULL ELSE CAST("6コースK1" AS INTEGER) END,
+  CASE WHEN "6コースS0" = '' OR "6コースS0" IS NULL THEN NULL ELSE CAST("6コースS0" AS INTEGER) END,
+  CASE WHEN "6コースS1" = '' OR "6コースS1" IS NULL THEN NULL ELSE CAST("6コースS1" AS INTEGER) END,
+  CASE WHEN "6コースS2回数" = '' OR "6コースS2回数" IS NULL THEN NULL ELSE CAST("6コースS2回数" AS INTEGER) END,
+  CASE WHEN "コースなしL0回数" = '' OR "コースなしL0回数" IS NULL THEN NULL ELSE CAST("コースなしL0回数" AS INTEGER) END,
+  CASE WHEN "コースなしL1回数" = '' OR "コースなしL1回数" IS NULL THEN NULL ELSE CAST("コースなしL1回数" AS INTEGER) END,
+  CASE WHEN "コースなしK0回数" = '' OR "コースなしK0回数" IS NULL THEN NULL ELSE CAST("コースなしK0回数" AS INTEGER) END,
+  CASE WHEN "コースなしK1回数" = '' OR "コースなしK1回数" IS NULL THEN NULL ELSE CAST("コースなしK1回数" AS INTEGER) END,
   出身地
 FROM temp_racers
 WHERE 年 != '年' AND 年 IS NOT NULL AND 年 != '';
 
--- 一時テーブルを削除
+-- 一時テーブル削除
 DROP TABLE temp_racers;
 EOF
 
-if [ $? -ne 0 ]; then
-    echo "エラー: CSVインポートに失敗しました"
-    exit 1
-fi
+# インポート結果の確認
+echo ""
+echo "インポート結果確認..."
 
-# インポート結果確認
-RECORD_COUNT=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM racers;")
-echo "インポート完了: $RECORD_COUNT 件のレコードが追加されました"
+IMPORTED_COUNT=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM racers;")
+echo "インポート件数: $IMPORTED_COUNT 件"
 
-echo "=== インポート完了 ==="
+# データ期間の確認
+PERIOD_INFO=$(sqlite3 "$DB_FILE" "
+SELECT 
+  MIN(year || '-' || period) as start_period,
+  MAX(year || '-' || period) as end_period,
+  COUNT(DISTINCT year || period || racer_number) as total_racers
+FROM racers;")
+
+echo "データ期間: $PERIOD_INFO"
+
+# サンプルデータの表示
+echo ""
+echo "サンプルデータ（最新3件）:"
+sqlite3 "$DB_FILE" "
+SELECT 
+  year, period, racer_number, name_kanji, class
+FROM racers 
+ORDER BY year DESC, period DESC, racer_number DESC 
+LIMIT 3;"
+
+echo ""
+echo "=== レーサー期別成績データ一括インポート完了 ==="
