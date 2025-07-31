@@ -108,9 +108,12 @@ CURRENT_EPOCH=$START_EPOCH
 while [ "$CURRENT_EPOCH" -le "$END_EPOCH" ]; do
     # エポック秒を日付文字列に変換
     CURRENT_DATE=$(date -d "@$CURRENT_EPOCH" +%Y-%m-%d)
-    
+
+    # 5行戻す（エスケープシーケンス）
+    printf '\033[5A'
+    # 進捗表示
     echo "[${CURRENT_DAY}/${TOTAL_DAYS}] $CURRENT_DATE の処理中..."
-    
+
     # convert_program.pyを実行（YYYY-MM-DD形式で渡す）
     if python convert_program.py "$CURRENT_DATE"; then
         echo "  → 成功"
@@ -120,11 +123,11 @@ while [ "$CURRENT_EPOCH" -le "$END_EPOCH" ]; do
         ERROR_COUNT=$((ERROR_COUNT + 1))
         error_exit "各日付の変換に失敗しました: $CURRENT_DATE"
     fi
-    
+
     # 次の日に進む
     CURRENT_EPOCH=$(next_day $CURRENT_EPOCH)
     CURRENT_DAY=$((CURRENT_DAY + 1))
-    
+
     echo ""
 done
 
