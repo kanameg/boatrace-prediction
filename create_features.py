@@ -34,6 +34,19 @@ def make_race_id(row):
     return int(f"{date_str}{place_str}{race_str}")
 
 
+def make_racer_id(row):
+    """
+    Create a unique racer ID from racer number, and course number.
+    Args:
+        row: DataFrame row
+    Returns:
+        int: Racer ID (NNNNNC as integer)
+    """
+    racer_id = f"{row['選手登番']:05d}"
+    course = f"{row['枠番']:01d}"
+    return int(f"{racer_id}{course}")
+
+
 def grade_to_numeric(grade):
     """
     Convert grade to numeric value.
@@ -102,70 +115,132 @@ def load_and_preprocess_programs(file_path, start_date=None, end_date=None):
 
     # レースIDを作成
     programs_df.insert(0, "レースID", programs_df.apply(make_race_id, axis=1))
+    # 選手コースIDを作成
+    programs_df.insert(1, "選手コースID", programs_df.apply(make_racer_id, axis=1))
 
-    # Convert grade to numeric
+    # 選手の級別を数値に変換
     programs_df["級別"] = programs_df["級別"].apply(grade_to_numeric)
 
-    # 特徴量として必要なカラムのみを選択
-    feature_columns = [
-        "レースID",
-        "枠番",
-        "選手登番",
-        "年齢",
-        "体重",
-        "級別",
-        "全国勝率",
-        "全国2連率",
-        "当地勝率",
-        "当地2連率",
-        "モーター2連率",
-        "ボート2連率",
-    ]
+    # 全カラムをそのまま利用
+    # # 特徴量として必要なカラムのみを選択
+    # feature_columns = [
+    #     "レースID",
+    #     "枠番",
+    #     "選手登番",
+    #     "年齢",
+    #     "体重",
+    #     "級別",
+    #     "全国勝率",
+    #     "全国2連率",
+    # ]
 
-    # 存在するカラムのみを選択
-    available_columns = [col for col in feature_columns if col in programs_df.columns]
-    print(f"available_columns: {available_columns}")
-    programs_df = programs_df[available_columns]
+    # # 存在するカラムのみを選択
+    # available_columns = [col for col in feature_columns if col in programs_df.columns]
+    # print(f"available_columns: {available_columns}")
+    # programs_df = programs_df[available_columns]
 
     # === コース別複勝率を追加 ===
     racers_df = pd.read_csv("data/racers.csv")
-    lane_win_rate_column_map = {
-        1: "1コース複勝率",
-        2: "2コース複勝率",
-        3: "3コース複勝率",
-        4: "4コース複勝率",
-        5: "5コース複勝率",
-        6: "6コース複勝率",
-    }
 
     def get_lane_win_rate(row):
+        """
+        この行の選手とコースから複勝率を計算する関数
+        Args:
+            row: DataFrameの行
+        Returns:
+            float: 複勝率（小数点以下3桁）
+        """
+        column_map = {
+            1: "1コース複勝率",
+            2: "2コース複勝率",
+            3: "3コース複勝率",
+            4: "4コース複勝率",
+            5: "5コース複勝率",
+            6: "6コース複勝率",
+        }
         racer_id = row["選手登番"]
         lane = row["枠番"]
-        col_name = lane_win_rate_column_map.get(lane)
+        col_name = column_map.get(lane)
         if col_name is None:
             return np.nan
         matched_rows = racers_df[racers_df["登番"] == racer_id]
         if len(matched_rows) == 0:
             return np.nan
         # ファイル末尾（最新）を優先
-        return pd.to_numeric(matched_rows.iloc[-1][col_name], errors="coerce")
+        return np.round(
+            pd.to_numeric(matched_rows.iloc[-1][col_name], errors="coerce"), decimals=3
+        )
+
+    def get_lane_1st_place_rate(row):
+        """
+        この行の選手とコースから1着率を計算する関数
+        Args:
+            row: DataFrameの行
+        Returns:
+            float: 1着率（小数点以下3桁）
+        コースでの1着率 = そのコースでの1着回数 / コースへの進入回数
+        """
+        column_1st_place_map = {
+            1: "1コース1着回数",
+            2: "2コース1着回数",
+            3: "3コース1着回数",
+            4: "4コース1着回数",
+            5: "5コース1着回数",
+            6: "6コース1着回数",
+        }
+        column_cource_entries_map = {
+            1: "1コース進入回数",
+            2: "2コース進入回数",
+            3: "3コース進入回数",
+            4: "4コース進入回数",
+            5: "5コース進入回数",
+            6: "6コース進入回数",
+        }
+        racer_id = row["選手登番"]
+        lane = row["枠番"]
+        col_1st_place_name = column_1st_place_map.get(lane)
+        if col_1st_place_name is None:
+            return np.nan
+        col_cource_entries_name = column_cource_entries_map.get(lane)
+        if col_cource_entries_name is None:
+            return np.nan
+
+        matched_rows = racers_df[racers_df["登番"] == racer_id]
+        if len(matched_rows) == 0:
+            return np.nan
+        # ファイル末尾（最新）を優先
+        num_1st_place = pd.to_numeric(
+            matched_rows.iloc[-1][col_1st_place_name], errors="coerce"
+        )
+        num_cource_entries = pd.to_numeric(
+            matched_rows.iloc[-1][col_cource_entries_name], errors="coerce"
+        )
+        rate_1st_place = np.round(
+            num_1st_place / num_cource_entries if num_cource_entries > 0 else 0,
+            decimals=3,
+        )
+        return rate_1st_place
 
     programs_df["コース別複勝率"] = programs_df.apply(get_lane_win_rate, axis=1)
+    programs_df["コース別1着率"] = programs_df.apply(get_lane_1st_place_rate, axis=1)
 
     # レース内平均差を追加
     def calc_rate_diff(rates):
         rates_numeric = pd.to_numeric(rates, errors="coerce")
         avg_rate = rates_numeric.mean()
-        return rates_numeric - avg_rate
+        return np.round(rates_numeric - avg_rate, decimals=3)
 
+    # ----------------------------------
+    # レース内平均差分計算
+    # ----------------------------------
     # レース内全国勝率差
     programs_df["レース内全国勝率差"] = programs_df.groupby("レースID")[
         "全国勝率"
     ].transform(calc_rate_diff)
 
-    # レース内モーター2連率差
-    programs_df["レース内モーター2連率差"] = programs_df.groupby("レースID")[
-        "モーター2連率"
+    # レース内コース別1着率差
+    programs_df["レース内コース別1着率差"] = programs_df.groupby("レースID")[
+        "コース別1着率"
     ].transform(calc_rate_diff)
 
     # レース内コース別複勝率差
@@ -299,15 +374,15 @@ def create_features(mode="train", start_date=None, end_date=None, output_path=No
             "data/programs.csv", start_date, end_date
         )
 
-        drop_columns = [
-            "選手登番",
-            "全国勝率",
-            "全国2連率",
-            "当地勝率",
-            "当地2連率",
-            "モーター2連率",
-            "ボート2連率",
-            "コース別複勝率",
+        # 特徴量として必要なカラムを定義
+        feature_columns = [
+            "レースID",
+            "枠番",
+            "級別",
+            "レース内全国勝率差",
+            "レース内コース別1着率差",
+            "レース内コース別複勝率差",
+            "1着フラグ",
         ]
 
         if mode == "train":
@@ -322,14 +397,13 @@ def create_features(mode="train", start_date=None, end_date=None, output_path=No
             # 着順を数値に変換してから1着フラグを作成
             merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
             merged_df["1着フラグ"] = (merged_df["着順"] == 1).astype(int)
-
-            # 着順列も削除（特徴量としては不要）
-            final_df = merged_df.drop(columns=drop_columns + ["着順"])
-
         elif mode == "pred":
-
             # 予測モード：番組データのみで特徴量を作成
-            final_df = programs_df.drop(columns=drop_columns)
+            merged_df = programs_df.copy()
+
+        # 必要なカラムのみを選択
+        available_columns = [col for col in feature_columns if col in merged_df.columns]
+        final_df = merged_df[available_columns]
 
         # 出力
         print(f"=== {output_path}として保存中 ===")
