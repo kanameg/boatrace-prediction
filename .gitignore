@@ -4,5 +4,3 @@
 .venv
 __pycache__/
 db/boat_race.db
-model/*
-!model/.gitkeep
