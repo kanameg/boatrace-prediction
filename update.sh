@@ -128,3 +128,14 @@ echo "番組表: 変換済み"
 echo "競走結果: 変換済み"
 echo "翌日番組表($NEXT_DATE): 取得済み"
 echo "========================================="
+
+# 5. Gitにコミット
+echo ""
+echo "----------------------------------------------------"
+echo "5. Gitにコミット中..."
+git add data/raw/programs/* data/raw/results/* data/programs.csv data/results.csv
+git commit -m "Update data for $TARGET_DATE"
+
+echo "========================================="
+echo "Gitコミット完了"
+echo "========================================="
