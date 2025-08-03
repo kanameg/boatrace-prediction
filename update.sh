@@ -132,10 +132,16 @@ echo "========================================="
 # 5. Gitにコミット
 echo ""
 echo "----------------------------------------------------"
-echo "5. Gitにコミット中..."
-git add data/raw/programs/* data/raw/results/* data/programs.csv data/results.csv
-git commit -m "Update data for $TARGET_DATE"
+echo "5. Gitへのコミットを確認中..."
 
-echo "========================================="
-echo "Gitコミット完了"
-echo "========================================="
+# 変更があるか確認
+if [ -n "$(git status --porcelain data/raw/programs/ data/raw/results/ data/programs.csv data/results.csv)" ]; then
+    echo "データが更新されました。コミットを実行します。"
+    git add data/raw/programs/* data/raw/results/* data/programs.csv data/results.csv
+    git commit -m "Update data for $TARGET_DATE"
+    echo "========================================="
+    echo "Gitコミット完了"
+    echo "========================================="
+else
+    echo "データに更新はありませんでした。コミットをスキップします。"
+fi
