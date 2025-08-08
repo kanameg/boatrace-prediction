@@ -7,7 +7,7 @@ EXPOSE 8088
 
 ENV TZ=Asia/Tokyo
 
-# パッケージのインストール
+# 各種パッケージのインストール
 RUN apt-get update && apt-get install -y \
     curl \
     fonts-ipaexfont \
@@ -17,6 +17,13 @@ RUN apt-get update && apt-get install -y \
     wget \
     locales \
     fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
+
+# GitHub CLIのインストール
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update \
+    && apt-get install -y gh
 
 # Node.jsのインストール
 # Node.jsのバージョンは必要に応じて変更してください
@@ -34,8 +41,10 @@ RUN /bin/bash -c "source /etc/default/locale"
 RUN ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
 
 WORKDIR /app
+
+# Pythonパッケージのインストール
 COPY requirements.txt /app
 RUN pip install -r requirements.txt
 
-# Google Gemini CLI
+# Google Gemini CLIのインストール
 RUN npm install -g @google/gemini-cli
