@@ -96,8 +96,10 @@ class ResultConverter:
 
     def extract_track_number(self, text: str) -> Optional[str]:
         """レース場名からレース場番号を抽出"""
+        # 全角・半角スペースを除去して検索
+        text_without_spaces = text.replace(" ", "").replace("　", "")
         for track_name, track_num in self.track_mapping.items():
-            if track_name in text:
+            if track_name in text_without_spaces:
                 return track_num
         return None
 
@@ -607,14 +609,11 @@ class ResultConverter:
                 if (
                     not in_track_section
                     and current_track_number is None
-                    and ("ボートレース" in line_stripped or "大　村" in line_stripped)
+                    and "ボートレース" in line_stripped
                 ):
                     extracted_track = self.extract_track_number(line_stripped)
                     if extracted_track:
                         current_track_number = extracted_track
-                        in_track_section = True
-                    elif "大　村" in line_stripped:
-                        current_track_number = "24"  # 大村は24番
                         in_track_section = True
 
                 # トラック終了マーカー
