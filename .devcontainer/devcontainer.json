@@ -29,6 +29,7 @@
 		"vscode": {
 			"extensions": [
 				"mechatroner.rainbow-csv", // Rainbow CSV extension for better CSV handling
+				"bierner.markdown-mermaid", // Mermaid support for Markdown
 				"ms-python.python",  // Python extension
 				"ms-python.black-formatter",  // Black Python formatter
 				"ms-python.isort",  // iSort Python formatter

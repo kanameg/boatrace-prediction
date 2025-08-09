@@ -111,20 +111,37 @@ sleep 2  # ダウンロード完了を待つためのスリープ
 # 3. 指定日から最新日までの番組表データを変換
 echo ""
 echo "----------------------------------------------------"
-echo "3. 番組表データ変換中（$START_DATE 〜 $LATEST_PROGRAM_DATE）..."
-./convert_programs.sh "$START_DATE" "$LATEST_PROGRAM_DATE"
+echo "3. 番組表データ変換中（$START_DATE 〜 $NEXT_DATE）..."
+./convert_programs.sh "$START_DATE" "$NEXT_DATE"
 
 # 4. 競走結果データを変換
 echo ""
 echo "----------------------------------------------------"
-echo "4. 競走結果データ変換中（$START_DATE 〜 $LATEST_RESULT_DATE）..."
-./convert_results.sh "$START_DATE" "$LATEST_RESULT_DATE"
+echo "4. 競走結果データ変換中（$START_DATE 〜 $TARGET_DATE）..."
+./convert_results.sh "$START_DATE" "$TARGET_DATE"
 
 echo "========================================="
 echo "データ更新処理完了"
-echo "番組表処理範囲: $START_DATE 〜 $LATEST_PROGRAM_DATE"
-echo "競走結果処理範囲: $START_DATE 〜 $LATEST_RESULT_DATE"
+echo "番組表処理範囲: $START_DATE 〜 $NEXT_DATE"
+echo "競走結果処理範囲: $START_DATE 〜 $TARGET_DATE"
 echo "番組表: 変換済み"
 echo "競走結果: 変換済み"
 echo "翌日番組表($NEXT_DATE): 取得済み"
 echo "========================================="
+
+# 5. Gitにコミット
+echo ""
+echo "----------------------------------------------------"
+echo "5. Gitへのコミットを確認中..."
+
+# 変更があるか確認
+if [ -n "$(git status --porcelain data/raw/programs/ data/raw/results/ data/programs.csv data/results.csv)" ]; then
+    echo "データが更新されました。コミットを実行します。"
+    git add data/raw/programs/* data/raw/results/* data/programs.csv data/results.csv
+    git commit -m "Update data for $TARGET_DATE"
+    echo "========================================="
+    echo "Gitコミット完了"
+    echo "========================================="
+else
+    echo "データに更新はありませんでした。コミットをスキップします。"
+fi

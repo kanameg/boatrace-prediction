@@ -244,6 +244,9 @@ def extract_fixed_position_data(line):
         print(f"抽出エラー: {e}")
         return None
 
+    # 西暦変換
+    gregorian_birthday = convert_to_gregorian(nengou, birthday)
+
     return [
         # 基本情報
         format_number(touban),
@@ -251,8 +254,7 @@ def extract_fixed_position_data(line):
         convert_halfwidth_kana_to_fullwidth(name_kana),
         shibu,
         kyu,
-        nengou,
-        birthday,
+        gregorian_birthday,
         gender,
         format_number(age),
         format_number(height),
@@ -453,19 +455,31 @@ def convert_period(period):
     return period
 
 
-def format_date(date_str, nengou):
-    """生年月日フォーマット（年号付き）"""
-    if not date_str or len(date_str) != 6:
-        return date_str
+def convert_to_gregorian(nengou, wareki_date):
+    """和暦を西暦に変換"""
+    if not wareki_date or len(wareki_date) != 6:
+        return ""
 
     try:
-        year = date_str[:2]
-        month = date_str[2:4]
-        day = date_str[4:6]
-        nengou_name = convert_nengou(nengou)
-        return f"{nengou_name}{int(year)}年{int(month)}月{int(day)}日"
-    except ValueError:
-        return date_str
+        wareki_year = int(wareki_date[:2])
+        month = int(wareki_date[2:4])
+        day = int(wareki_date[4:6])
+
+        if nengou == "S":
+            year = 1925 + wareki_year
+        elif nengou == "H":
+            year = 1988 + wareki_year
+        elif nengou == "R":
+            year = 2018 + wareki_year
+        else:
+            return ""  # 不明な年号
+
+        return f"{year}-{month:02d}-{day:02d}"
+    except (ValueError, TypeError):
+        return ""
+
+
+
 
 
 def format_date_yyyymmdd(date_str):
@@ -506,11 +520,12 @@ def parse_racer_data(file_path):
     # 年(49列目), 期(50列目)を先頭に移動
     for i in range(len(results)):
         row = results[i]
-        if len(row) > 50:
-            year = row[49]
-            period = row[50]
-            # 49,50列目を削除して先頭に挿入
-            new_row = [year, period] + row[:49] + row[51:]
+        # 年は49番目(index 48), 期は50番目(index 49)
+        if len(row) > 49:
+            year = row[48]
+            period = row[49]
+            # 年と期を元のリストから削除し、先頭に追加
+            new_row = [year, period] + row[:48] + row[50:]
             results[i] = new_row
     return results
 
@@ -525,7 +540,6 @@ def write_csv(results, output_file, year, period):
         "名前カナ",
         "支部",
         "級",
-        "年号",
         "生年月日",
         "性別",
         "年齢",
