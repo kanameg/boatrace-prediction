@@ -137,8 +137,26 @@ echo "5. Gitへのコミットを確認中..."
 # 変更があるか確認
 if [ -n "$(git status --porcelain data/raw/programs/ data/raw/results/ data/programs.csv data/results.csv)" ]; then
     echo "データが更新されました。コミットを実行します。"
+    
+    # 現在のブランチを保存
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    
+    # mainブランチに切り替え
+    if [ "$CURRENT_BRANCH" != "main" ]; then
+        echo "現在のブランチは $CURRENT_BRANCH です。"
+        echo "mainブランチに切り替えます..."
+        git checkout main
+    fi
+    
     git add data/raw/programs/* data/raw/results/* data/programs.csv data/results.csv
     git commit -m "Update data for $TARGET_DATE"
+    
+    # 元のブランチに戻す
+    if [ "$CURRENT_BRANCH" != "main" ]; then
+        echo "$CURRENT_BRANCH ブランチに戻ります..."
+        git checkout "$CURRENT_BRANCH"
+    fi
+    
     echo "========================================="
     echo "Gitコミット完了"
     echo "========================================="
