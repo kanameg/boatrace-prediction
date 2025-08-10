@@ -22,6 +22,7 @@ def make_race_id(row):
 def validate_date_format(date_string):
     """
     日付形式の妥当性をチェック
+    DateTimeに変換できるかを確認し、無効な場合は例外を発生させる。
 
     Args:
         date_string: 日付文字列
@@ -57,6 +58,9 @@ def create_features(start_date, end_date):
     # racers.csvを読み込む
     racers_df = pd.read_csv("data/racers.csv", encoding="utf-8-sig")
 
+    # results.csvを読み込む
+    results_df = pd.read_csv("data/results.csv", encoding="utf-8-sig")
+
     # 日付範囲でデータを絞り込む
     start_dt = datetime.strptime(start_date, "%Y-%m-%d")
     end_dt = datetime.strptime(end_date, "%Y-%m-%d")
@@ -72,23 +76,38 @@ def create_features(start_date, end_date):
     mask = (programs_df["日付"] >= start_dt) & (programs_df["日付"] <= end_dt)
     programs_df = programs_df[mask]
 
+    results_df["日付"] = pd.to_datetime(
+        results_df["年"].astype(str)
+        + "-"
+        + results_df["月"].astype(str).str.zfill(2)
+        + "-"
+        + results_df["日"].astype(str).str.zfill(2)
+    )
+    mask = (results_df["日付"] >= start_dt) & (results_df["日付"] <= end_dt)
+    results_df = results_df[mask]
+
     print(f"日付範囲 {start_date} から {end_date} でフィルタリング後:")
     print(f"programs データ件数: {len(programs_df):,} 件")
+    print(f"results データ件数: {len(results_df):,} 件")
 
-    if len(programs_df) == 0:
+    if len(programs_df) == 0 or len(results_df) == 0:
         print("警告: 指定された日付範囲にデータが存在しません。")
         return []
 
     # 必要な特徴量を計算
     features = []
 
+    # --------------------------------------------------------------------------------
     # レース内全国勝率差の特徴量を計算
+    # --------------------------------------------------------------------------------
     national_win_rate_diff_df = calculate_national_win_rate_diff(programs_df)
     features.append(("レース内全国勝率差", national_win_rate_diff_df))
     print("=== レース内全国勝率差 ===")
     print(national_win_rate_diff_df.shape)
 
+    # --------------------------------------------------------------------------------
     # レース内コース別1着率差の特徴量を計算
+    # --------------------------------------------------------------------------------
     course_win_rate_diff_df = calculate_course_win_rate_diff(programs_df, racers_df)
     features.append(("レース内コース別1着率差", course_win_rate_diff_df))
     print("=== レース内コース別1着率差 ===")
@@ -97,7 +116,9 @@ def create_features(start_date, end_date):
     return features
 
 
+# --------------------------------------------------------------------------------
 # 以下は特徴量作成関数一覧
+# --------------------------------------------------------------------------------
 
 
 # 全国勝率差を計算する関数
@@ -113,6 +134,8 @@ def calculate_national_win_rate_diff(programs_df):
     Returns:
         pd.DataFrame: 「レース内全国勝率差」列と、レースID、枠番を含むDataFrame。
     """
+    col_name = "レース内全国勝率差"
+    sort_col_name = ["レースID", "枠番"]
     df = programs_df.copy()
 
     # 「レースID」が存在しない場合は作成する
@@ -126,12 +149,11 @@ def calculate_national_win_rate_diff(programs_df):
         return np.round(rates_numeric - avg_rate, decimals=3)
 
     # 差分を計算
-    df["レース内全国勝率差"] = df.groupby("レースID")["全国勝率"].transform(
-        calc_rate_diff
-    )
-    df.sort_values(by=["レースID", "枠番"], inplace=True)
+    df[col_name] = df.groupby("レースID")["全国勝率"].transform(calc_rate_diff)
+    # 全データで並びが崩れないようにソート(レースIDと枠番)
+    df.sort_values(by=sort_col_name, inplace=True)
 
-    return df[["レースID", "枠番", "レース内全国勝率差"]]
+    return df[sort_col_name + [col_name]]
 
 
 # レース内コース別1着率差を計算する関数
@@ -146,6 +168,8 @@ def calculate_course_win_rate_diff(programs_df, racers_df):
     Returns:
         pd.DataFrame: 「レース内コース別1着率差」列と、レースID、枠番を含むDataFrame
     """
+    col_name = "レース内コース別1着率差"
+    sort_col_name = ["レースID", "枠番"]
     df = programs_df.copy()
 
     # 「レースID」が存在しない場合は作成する
@@ -192,12 +216,11 @@ def calculate_course_win_rate_diff(programs_df, racers_df):
             return rates_numeric  # すべてNaNの場合はそのまま返す
 
     # レース内でのコース別1着率差を計算
-    df["レース内コース別1着率差"] = df.groupby("レースID")["コース別1着率"].transform(
-        calc_rate_diff
-    )
-    df.sort_values(by=["レースID", "枠番"], inplace=True)
+    df[col_name] = df.groupby("レースID")["コース別1着率"].transform(calc_rate_diff)
+    # 全データで並びが崩れないようにソート(レースIDと枠番)
+    df.sort_values(by=sort_col_name, inplace=True)
 
-    return df[["レースID", "枠番", "レース内コース別1着率差"]]
+    return df[sort_col_name + [col_name]]
 
 
 def main():
