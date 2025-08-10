@@ -13,9 +13,9 @@ def make_race_id(row):
     Returns:
         int: レースID（YYYYMMDDPPRRRの整数）
     """
-    date_str = f"{row['年']:04d}{row['月']:02d}{row['日']:02d}"
-    place_str = f"{row['レース場番号']:02d}"
-    race_str = f"{row['レース番号']:02d}"
+    date_str = f"{int(row['年']):04d}{int(row['月']):02d}{int(row['日']):02d}"
+    place_str = f"{int(row['レース場番号']):02d}"
+    race_str = f"{int(row['レース番号']):02d}"
     return int(f"{date_str}{place_str}{race_str}")
 
 
@@ -31,7 +31,10 @@ def validate_date_format(date_string):
         str: 妥当な場合はそのまま、無効な場合は例外を発生
     """
     try:
-        datetime.strptime(date_string, "%Y-%m-%d")
+        # strptimeでパースし、strftimeで再度フォーマットして元の文字列と比較
+        dt = datetime.strptime(date_string, "%Y-%m-%d")
+        if dt.strftime("%Y-%m-%d") != date_string:
+            raise ValueError
         return date_string
     except ValueError:
         raise argparse.ArgumentTypeError(
