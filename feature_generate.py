@@ -134,15 +134,15 @@ def calculate_national_win_rate_diff(programs_df):
     Returns:
         pd.DataFrame: 「レース内全国勝率差」列と、レースID、枠番を含むDataFrame。
     """
-    col_name = "レース内全国勝率差"
-    sort_col_name = ["レースID", "枠番"]
+    col_name = "レース内全国勝率差"  # 特徴量名
+    sort_col_name = ["レースID", "枠番"]  # ソートに使用する列名
     df = programs_df.copy()
 
     # 「レースID」が存在しない場合は作成する
     if "レースID" not in df.columns:
         df["レースID"] = df.apply(make_race_id, axis=1)
 
-    # 平均値との差分を計算する関数を定義
+    # 平均値との差分を計算する関数を定義 (TODO: 共通化可能)
     def calc_rate_diff(rates):
         rates_numeric = pd.to_numeric(rates, errors="coerce")
         avg_rate = rates_numeric.mean()
@@ -168,8 +168,8 @@ def calculate_course_win_rate_diff(programs_df, racers_df):
     Returns:
         pd.DataFrame: 「レース内コース別1着率差」列と、レースID、枠番を含むDataFrame
     """
-    col_name = "レース内コース別1着率差"
-    sort_col_name = ["レースID", "枠番"]
+    col_name = "レース内コース別1着率差"  # 特徴量名
+    sort_col_name = ["レースID", "枠番"]  # ソートに使用する列名
     df = programs_df.copy()
 
     # 「レースID」が存在しない場合は作成する
@@ -198,13 +198,17 @@ def calculate_course_win_rate_diff(programs_df, racers_df):
 
                 if pd.notna(win_count) and pd.notna(total_count) and total_count > 0:
                     return round(win_count / total_count, 4)
+                else:
+                    # データがないまたは、0除算になる場合は0.0f
+                    return 0.0
 
+        # 選手情報がない場合のみNaN
         return np.nan
 
     # 各選手のコース別1着率を計算
     df["コース別1着率"] = df.apply(calculate_course_win_rate, axis=1)
 
-    # 平均値との差分を計算する関数を定義
+    # 平均値との差分を計算する関数を定義 (TODO: 共通化可能)
     def calc_rate_diff(rates):
         rates_numeric = pd.to_numeric(rates, errors="coerce")
         # NaNを除いて平均を計算
