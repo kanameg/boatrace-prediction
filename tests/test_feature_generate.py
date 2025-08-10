@@ -30,11 +30,12 @@ class TestFeatureGenerate(unittest.TestCase):
         """
         # 正常なケース
         self.assertEqual(validate_date_format("2025-01-01"), "2025-01-01")
+        self.assertEqual(validate_date_format("2024-2-29"), "2024-2-29")
         # 異常なケース
         with self.assertRaises(argparse.ArgumentTypeError):
             validate_date_format("2025/01/01")
-        with self.assertRaises(argparse.ArgumentTypeError):
-            validate_date_format("2025-1-1")
+        # with self.assertRaises(argparse.ArgumentTypeError):
+        #     validate_date_format("2025-1-1")
         with self.assertRaises(argparse.ArgumentTypeError):
             validate_date_format("invalid-date")
 

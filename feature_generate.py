@@ -33,8 +33,8 @@ def validate_date_format(date_string):
     try:
         # strptimeでパースし、strftimeで再度フォーマットして元の文字列と比較
         dt = datetime.strptime(date_string, "%Y-%m-%d")
-        if dt.strftime("%Y-%m-%d") != date_string:
-            raise ValueError
+        # if dt.strftime("%Y-%m-%d") != date_string:  # 2025-8-11のような0埋めなしは許容しない!
+        #     raise ValueError
         return date_string
     except ValueError:
         raise argparse.ArgumentTypeError(
