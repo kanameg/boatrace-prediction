@@ -116,6 +116,28 @@ def create_features(start_date, end_date):
     print("=== レース内コース別1着率差 ===")
     print(course_win_rate_diff_df.shape)
 
+    # --------------------------------------------------------------------------------
+    # レース内コース別平均スタートタイミング差の特徴量を計算
+    # --------------------------------------------------------------------------------
+    course_start_timing_diff_df = calculate_course_start_timing_diff(
+        programs_df, racers_df
+    )
+    features.append(
+        ("レース内コース別平均スタートタイミング差", course_start_timing_diff_df)
+    )
+    print("=== レース内コース別平均スタートタイミング差 ===")
+    print(course_start_timing_diff_df.shape)
+
+    # --------------------------------------------------------------------------------
+    # 1位フラグの特徴量を計算（results.csvの着順データから）
+    # --------------------------------------------------------------------------------
+    if "着順" in results_df.columns:
+        first_place_flag_df = calculate_first_place(programs_df, results_df)
+        if first_place_flag_df is not None and not first_place_flag_df.empty:
+            features.append(("1位フラグ", first_place_flag_df))
+            print("=== 1位フラグ ===")
+            print(first_place_flag_df.shape)
+
     return features
 
 
@@ -228,6 +250,139 @@ def calculate_course_win_rate_diff(programs_df, racers_df):
     df.sort_values(by=sort_col_name, inplace=True)
 
     return df[sort_col_name + [col_name]]
+
+
+# レース内コース別平均スタートタイミング差を計算する関数
+def calculate_course_start_timing_diff(programs_df, racers_df):
+    """
+    各レース内でのコース別平均スタートタイミングの平均からの差分を計算します。
+
+    Args:
+        programs_df (pd.DataFrame): programs.csvから読み込んだDataFrame
+        racers_df (pd.DataFrame): racers.csvから読み込んだDataFrame
+
+    Returns:
+        pd.DataFrame: 「レース内コース別平均スタートタイミング差」列と、レースID、枠番を含むDataFrame
+    """
+    col_name = "レース内コース別平均スタートタイミング差"  # 特徴量名
+    sort_col_name = ["レースID", "枠番"]  # ソートに使用する列名
+    df = programs_df.copy()
+
+    # 「レースID」が存在しない場合は作成する
+    if "レースID" not in df.columns:
+        df["レースID"] = df.apply(make_race_id, axis=1)
+
+    # racers_dfから必要な情報を取得（選手登番をキーとして結合）
+    # コース別平均スタートタイミングを計算する関数
+    def calculate_course_start_timing(row):
+        course = row["枠番"]  # 枠番をコースとして使用
+        start_timing_col = f"{course}コース平均スタートタイミング"
+
+        if start_timing_col in racers_df.columns:
+            racer_data = racers_df[racers_df["登番"] == row["選手登番"]]
+            if not racer_data.empty:
+                # 最近の選手データを利用するため末尾のデータ[-1]にアクセス
+                start_timing = racer_data.iloc[-1][start_timing_col]
+
+                # 数値型に変換
+                start_timing = pd.to_numeric(start_timing, errors="coerce")
+
+                if pd.notna(start_timing):
+                    return round(start_timing, 3)
+                else:
+                    # データがない場合は0.0f
+                    return 0.0
+
+        # 選手情報がない場合のみNaN
+        return np.nan
+
+    # 各選手のコース別平均スタートタイミングを計算
+    df["コース別平均スタートタイミング"] = df.apply(
+        calculate_course_start_timing, axis=1
+    )
+
+    # 平均値との差分を計算する関数を定義 (TODO: 共通化可能)
+    def calc_timing_diff(timings):
+        timings_numeric = pd.to_numeric(timings, errors="coerce")
+        # NaNを除いて平均を計算
+        valid_timings = timings_numeric.dropna()
+        if len(valid_timings) > 0:
+            avg_timing = valid_timings.mean()
+            return np.round(timings_numeric - avg_timing, decimals=3)
+        else:
+            return timings_numeric  # すべてNaNの場合はそのまま返す
+
+    # レース内でのコース別平均スタートタイミング差を計算
+    df[col_name] = df.groupby("レースID")["コース別平均スタートタイミング"].transform(
+        calc_timing_diff
+    )
+    # 全データで並びが崩れないようにソート(レースIDと枠番)
+    df.sort_values(by=sort_col_name, inplace=True)
+
+    return df[sort_col_name + [col_name]]
+
+
+# 1位フラグを計算する関数
+def calculate_first_place(programs_df, results_df):
+    """
+    results.csvの着順データから1位フラグを作成します。
+
+    Args:
+        programs_df (pd.DataFrame): programs.csvから読み込んだDataFrame
+        results_df (pd.DataFrame): results.csvから読み込んだDataFrame
+
+    Returns:
+        pd.DataFrame: 「1位フラグ」列と、レースID、枠番を含むDataFrame
+    """
+    if "着順" not in results_df.columns:
+        print(
+            "警告: results.csvに「着順」列が存在しません。1位フラグは作成されません。"
+        )
+        return None
+
+    col_name = "1位フラグ"  # 特徴量名
+    sort_col_name = ["レースID", "枠番"]  # ソートに使用する列名
+
+    # programs_dfからベースとなるDataFrameを作成
+    df = programs_df.copy()
+
+    # 「レースID」が存在しない場合は作成する
+    if "レースID" not in df.columns:
+        df["レースID"] = df.apply(make_race_id, axis=1)
+
+    # results_dfにもレースIDを作成
+    results_with_race_id = results_df.copy()
+    if "レースID" not in results_with_race_id.columns:
+        results_with_race_id["レースID"] = results_with_race_id.apply(
+            make_race_id, axis=1
+        )
+
+    # results_dfから1位フラグを作成（着順が1の場合は1、それ以外は0）
+    results_with_race_id = results_with_race_id.copy()  # コピーを明示的に作成
+    results_with_race_id[col_name] = (
+        results_with_race_id["着順"].astype(str) == "1"
+    ).astype(int)
+
+    # programs_dfとresults_dfをレースID、枠番（艇番）でマージ
+    # 注意: programs.csvは「枠番」、results.csvは「艇番」の列名
+    merge_df = df.merge(
+        results_with_race_id[["レースID", "艇番", col_name]],
+        left_on=["レースID", "枠番"],
+        right_on=["レースID", "艇番"],
+        how="left",
+    )
+
+    # マージできなかった場合は0で埋める
+    merge_df[col_name] = merge_df[col_name].fillna(0).astype(int)
+
+    # 不要な列を削除（艇番列）
+    if "艇番" in merge_df.columns:
+        merge_df = merge_df.drop("艇番", axis=1)
+
+    # 全データで並びが崩れないようにソート(レースIDと枠番)
+    merge_df.sort_values(by=sort_col_name, inplace=True)
+
+    return merge_df[sort_col_name + [col_name]]
 
 
 def main():
