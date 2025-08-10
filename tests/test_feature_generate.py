@@ -33,11 +33,15 @@ class TestFeatureGenerate(unittest.TestCase):
         self.assertEqual(validate_date_format("2024-2-29"), "2024-2-29")
         # 異常なケース
         with self.assertRaises(argparse.ArgumentTypeError):
-            validate_date_format("2025/01/01")
+            validate_date_format("2025/01/01")  # スラッシュ区切りは許容しない
+        with self.assertRaises(argparse.ArgumentTypeError):
+            validate_date_format("2025-02-29")  # 存在しない日付（閏年でない）
+        with self.assertRaises(argparse.ArgumentTypeError):
+            validate_date_format("2025-04-31")  # 存在しない日付（4月は30日まで）
         # with self.assertRaises(argparse.ArgumentTypeError):
         #     validate_date_format("2025-1-1")
         with self.assertRaises(argparse.ArgumentTypeError):
-            validate_date_format("invalid-date")
+            validate_date_format("invalid-date")  # 無効な日付形式
 
     def test_calculate_national_win_rate_diff(self):
         """
