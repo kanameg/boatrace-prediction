@@ -41,6 +41,14 @@ def validate_date_format(date_string):
 def create_features(start_date, end_date):
     """
     特徴量を作成するメイン関数
+    CSVデータを読み込んで、ここで各特徴量を作成する関数を呼び出す。
+
+    Args:
+        start_date (str): 開始日 (YYYY-MM-DD形式)
+        end_date (str): 終了日 (YYYY-MM-DD形式)
+
+    Returns:
+        list: (特徴量名, DataFrame) のタプルのリスト
     """
     # ここに特徴量作成のロジックを実装
     # programs.csvを読み込む
@@ -235,7 +243,7 @@ def main():
     features = create_features(
         start_date=args.start_date,
         end_date=args.end_date,
-    )
+    )  # 特徴量情報(名前とデータフレーム名)
 
     # 各特徴量をCSVファイルとして保存
     for feature_name, df in features:
