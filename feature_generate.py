@@ -314,7 +314,8 @@ def calculate_course_place_rate_zscore(programs_df, racers_df):
                 place_rate = pd.to_numeric(place_rate, errors="coerce")
 
                 if pd.notna(place_rate):
-                    return round(place_rate, 4)
+                    # パーセンテージから割合に変換（100で割る）
+                    return round(place_rate / 100, 3)
                 else:
                     # データがない場合は0.0f
                     return 0.0
@@ -332,7 +333,7 @@ def calculate_course_place_rate_zscore(programs_df, racers_df):
         valid_rates = rates_numeric.dropna()
         if len(valid_rates) > 0:
             avg_rate = valid_rates.mean()
-            return np.round(rates_numeric - avg_rate, decimals=4)
+            return np.round(rates_numeric - avg_rate, decimals=3)
         else:
             return rates_numeric  # すべてNaNの場合はそのまま返す
 
