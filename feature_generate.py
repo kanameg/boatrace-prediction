@@ -302,41 +302,21 @@ def calculate_course_place_rate_zscore(programs_df, racers_df):
     # コース別複勝率を計算する関数
     def calculate_course_place_rate(row):
         course = row["枠番"]  # 枠番をコースとして使用
-        course_column_prefix = f"{course}コース"
+        place_rate_col = f"{course}コース複勝率"
 
-        place1_count_col = f"{course_column_prefix}1着回数"
-        place2_count_col = f"{course_column_prefix}2着回数"
-        total_count_col = f"{course_column_prefix}進入回数"
-
-        if (
-            place1_count_col in racers_df.columns
-            and place2_count_col in racers_df.columns
-            and total_count_col in racers_df.columns
-        ):
-
+        if place_rate_col in racers_df.columns:
             racer_data = racers_df[racers_df["登番"] == row["選手登番"]]
             if not racer_data.empty:
                 # 最近の選手データを利用するため末尾のデータ[-1]にアクセス
-                place1_count = racer_data.iloc[-1][place1_count_col]
-                place2_count = racer_data.iloc[-1][place2_count_col]
-                total_count = racer_data.iloc[-1][total_count_col]
+                place_rate = racer_data.iloc[-1][place_rate_col]
 
-                # 数値型に変換し、0除算を避ける
-                place1_count = pd.to_numeric(place1_count, errors="coerce")
-                place2_count = pd.to_numeric(place2_count, errors="coerce")
-                total_count = pd.to_numeric(total_count, errors="coerce")
+                # 数値型に変換
+                place_rate = pd.to_numeric(place_rate, errors="coerce")
 
-                if (
-                    pd.notna(place1_count)
-                    and pd.notna(place2_count)
-                    and pd.notna(total_count)
-                    and total_count > 0
-                ):
-                    # 1着回数 + 2着回数 / 進入回数
-                    place_count = place1_count + place2_count
-                    return round(place_count / total_count, 4)
+                if pd.notna(place_rate):
+                    return round(place_rate, 4)
                 else:
-                    # データがないまたは、0除算になる場合は0.0f
+                    # データがない場合は0.0f
                     return 0.0
 
         # 選手情報がない場合のみNaN
