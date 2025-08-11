@@ -129,13 +129,13 @@ def create_features(start_date, end_date):
     print(course_start_timing_diff_df.shape)
 
     # --------------------------------------------------------------------------------
-    # 1位フラグの特徴量を計算（results.csvの着順データから）
+    # 1着フラグの特徴量を計算（results.csvの着順データから）
     # --------------------------------------------------------------------------------
     if "着順" in results_df.columns:
         first_place_flag_df = calculate_first_place(programs_df, results_df)
         if first_place_flag_df is not None and not first_place_flag_df.empty:
-            features.append(("1位フラグ", first_place_flag_df))
-            print("=== 1位フラグ ===")
+            features.append(("1着フラグ", first_place_flag_df))
+            print("=== 1着フラグ ===")
             print(first_place_flag_df.shape)
 
     return features
@@ -322,25 +322,25 @@ def calculate_course_start_timing_diff(programs_df, racers_df):
     return df[sort_col_name + [col_name]]
 
 
-# 1位フラグを計算する関数
+# 1着フラグを計算する関数
 def calculate_first_place(programs_df, results_df):
     """
-    results.csvの着順データから1位フラグを作成します。
+    results.csvの着順データから1着フラグを作成します。
 
     Args:
         programs_df (pd.DataFrame): programs.csvから読み込んだDataFrame
         results_df (pd.DataFrame): results.csvから読み込んだDataFrame
 
     Returns:
-        pd.DataFrame: 「1位フラグ」列と、レースID、枠番を含むDataFrame
+        pd.DataFrame: 「1着フラグ」列と、レースID、枠番を含むDataFrame
     """
     if "着順" not in results_df.columns:
         print(
-            "警告: results.csvに「着順」列が存在しません。1位フラグは作成されません。"
+            "警告: results.csvに「着順」列が存在しません。1着フラグは作成されません。"
         )
         return None
 
-    col_name = "1位フラグ"  # 特徴量名
+    col_name = "1着フラグ"  # 特徴量名
     sort_col_name = ["レースID", "枠番"]  # ソートに使用する列名
 
     # programs_dfからベースとなるDataFrameを作成
@@ -357,7 +357,7 @@ def calculate_first_place(programs_df, results_df):
             make_race_id, axis=1
         )
 
-    # results_dfから1位フラグを作成（着順が1の場合は1、それ以外は0）
+    # results_dfから1着フラグを作成（着順が1の場合は1、それ以外は0）
     results_with_race_id = results_with_race_id.copy()  # コピーを明示的に作成
     results_with_race_id[col_name] = (
         results_with_race_id["着順"].astype(str) == "1"
