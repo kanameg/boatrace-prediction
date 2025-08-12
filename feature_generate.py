@@ -103,39 +103,65 @@ def create_features(start_date, end_date):
     # --------------------------------------------------------------------------------
     # レース内全国勝率差の特徴量を計算
     # --------------------------------------------------------------------------------
-    national_win_rate_diff_df = calculate_national_win_rate_diff(programs_df)
-    features.append(("レース内全国勝率差", national_win_rate_diff_df))
+    national_win_rate_zscore_df = calculate_national_win_rate_zscore(programs_df)
+    features.append(("レース内全国勝率差", national_win_rate_zscore_df))
     print("=== レース内全国勝率差 ===")
-    print(national_win_rate_diff_df.shape)
+    print(national_win_rate_zscore_df.shape)
 
     # --------------------------------------------------------------------------------
     # レース内コース別1着率差の特徴量を計算
     # --------------------------------------------------------------------------------
-    course_win_rate_diff_df = calculate_course_win_rate_diff(programs_df, racers_df)
-    features.append(("レース内コース別1着率差", course_win_rate_diff_df))
+    course_win_rate_zscore_df = calculate_course_win_rate_zscore(programs_df, racers_df)
+    features.append(("レース内コース別1着率差", course_win_rate_zscore_df))
     print("=== レース内コース別1着率差 ===")
-    print(course_win_rate_diff_df.shape)
+    print(course_win_rate_zscore_df.shape)
+
+    # --------------------------------------------------------------------------------
+    # レース内コース別複勝率差の特徴量を計算
+    # --------------------------------------------------------------------------------
+    course_place_rate_zscore_df = calculate_course_place_rate_zscore(
+        programs_df, racers_df
+    )
+    features.append(("レース内コース別複勝率差", course_place_rate_zscore_df))
+    print("=== レース内コース別複勝率差 ===")
+    print(course_place_rate_zscore_df.shape)
 
     # --------------------------------------------------------------------------------
     # レース内コース別平均スタートタイミング差の特徴量を計算
     # --------------------------------------------------------------------------------
-    course_start_timing_diff_df = calculate_course_start_timing_diff(
+    course_start_timing_zscore_df = calculate_course_start_timing_zscore(
         programs_df, racers_df
     )
     features.append(
-        ("レース内コース別平均スタートタイミング差", course_start_timing_diff_df)
+        ("レース内コース別平均スタートタイミング差", course_start_timing_zscore_df)
     )
     print("=== レース内コース別平均スタートタイミング差 ===")
-    print(course_start_timing_diff_df.shape)
+    print(course_start_timing_zscore_df.shape)
+
+    # # --------------------------------------------------------------------------------
+    # # 級の特徴量を計算
+    # # --------------------------------------------------------------------------------
+    # rank_df = calculate_rank(programs_df)
+    # features.append(("級", rank_df))
+    # print("=== 級 ===")
+    # print(rank_df.shape)
 
     # --------------------------------------------------------------------------------
-    # 1位フラグの特徴量を計算（results.csvの着順データから）
+    # レース内級差の特徴量を計算
+    # --------------------------------------------------------------------------------
+    rank_zscore_df = calculate_rank_zscore(programs_df)
+    features.append(("レース内級差", rank_zscore_df))
+    print("=== レース内級差 ===")
+    print(rank_zscore_df.shape)
+
+    # --------------------------------------------------------------------------------
+    # 1着フラグの特徴量を計算（results.csvの着順データから）
     # --------------------------------------------------------------------------------
     if "着順" in results_df.columns:
         first_place_flag_df = calculate_first_place(programs_df, results_df)
         if first_place_flag_df is not None and not first_place_flag_df.empty:
-            features.append(("1位フラグ", first_place_flag_df))
-            print("=== 1位フラグ ===")
+            features.append(("1着フラグ", first_place_flag_df))
+            print("=== 1着フラグ ===")
             print(first_place_flag_df.shape)
 
     return features
@@ -147,7 +173,7 @@ def create_features(start_date, end_date):
 
 
 # 全国勝率差を計算する関数
-def calculate_national_win_rate_diff(programs_df):
+def calculate_national_win_rate_zscore(programs_df):
     """
     各レース内での全国勝率の平均からの差分を計算します。
     この関数は「レースID」列が存在しない場合は追加します。
@@ -168,13 +194,13 @@ def calculate_national_win_rate_diff(programs_df):
         df["レースID"] = df.apply(make_race_id, axis=1)
 
     # 平均値との差分を計算する関数を定義 (TODO: 共通化可能)
-    def calc_rate_diff(rates):
+    def calc_rate_zscore(rates):
         rates_numeric = pd.to_numeric(rates, errors="coerce")
         avg_rate = rates_numeric.mean()
         return np.round(rates_numeric - avg_rate, decimals=3)
 
     # 差分を計算
-    df[col_name] = df.groupby("レースID")["全国勝率"].transform(calc_rate_diff)
+    df[col_name] = df.groupby("レースID")["全国勝率"].transform(calc_rate_zscore)
     # 全データで並びが崩れないようにソート(レースIDと枠番)
     df.sort_values(by=sort_col_name, inplace=True)
 
@@ -182,7 +208,7 @@ def calculate_national_win_rate_diff(programs_df):
 
 
 # レース内コース別1着率差を計算する関数
-def calculate_course_win_rate_diff(programs_df, racers_df):
+def calculate_course_win_rate_zscore(programs_df, racers_df):
     """
     各レース内でのコース別1着率の平均からの差分を計算します。
 
@@ -234,7 +260,7 @@ def calculate_course_win_rate_diff(programs_df, racers_df):
     df["コース別1着率"] = df.apply(calculate_course_win_rate, axis=1)
 
     # 平均値との差分を計算する関数を定義 (TODO: 共通化可能)
-    def calc_rate_diff(rates):
+    def calc_rate_zscore(rates):
         rates_numeric = pd.to_numeric(rates, errors="coerce")
         # NaNを除いて平均を計算
         valid_rates = rates_numeric.dropna()
@@ -245,7 +271,74 @@ def calculate_course_win_rate_diff(programs_df, racers_df):
             return rates_numeric  # すべてNaNの場合はそのまま返す
 
     # レース内でのコース別1着率差を計算
-    df[col_name] = df.groupby("レースID")["コース別1着率"].transform(calc_rate_diff)
+    df[col_name] = df.groupby("レースID")["コース別1着率"].transform(calc_rate_zscore)
+    # 全データで並びが崩れないようにソート(レースIDと枠番)
+    df.sort_values(by=sort_col_name, inplace=True)
+
+    return df[sort_col_name + [col_name]]
+
+
+# レース内コース別複勝率差を計算する関数
+def calculate_course_place_rate_zscore(programs_df, racers_df):
+    """
+    各レース内でのコース別複勝率（1・2着率）の平均からの差分を計算します。
+
+    Args:
+        programs_df (pd.DataFrame): programs.csvから読み込んだDataFrame
+        racers_df (pd.DataFrame): racers.csvから読み込んだDataFrame
+
+    Returns:
+        pd.DataFrame: 「レース内コース別複勝率差」列と、レースID、枠番を含むDataFrame
+    """
+    col_name = "レース内コース別複勝率差"  # 特徴量名
+    sort_col_name = ["レースID", "枠番"]  # ソートに使用する列名
+    df = programs_df.copy()
+
+    # 「レースID」が存在しない場合は作成する
+    if "レースID" not in df.columns:
+        df["レースID"] = df.apply(make_race_id, axis=1)
+
+    # racers_dfから必要な情報を取得（選手登番をキーとして結合）
+    # コース別複勝率を計算する関数
+    def calculate_course_place_rate(row):
+        course = row["枠番"]  # 枠番をコースとして使用
+        place_rate_col = f"{course}コース複勝率"
+
+        if place_rate_col in racers_df.columns:
+            racer_data = racers_df[racers_df["登番"] == row["選手登番"]]
+            if not racer_data.empty:
+                # 最近の選手データを利用するため末尾のデータ[-1]にアクセス
+                place_rate = racer_data.iloc[-1][place_rate_col]
+
+                # 数値型に変換
+                place_rate = pd.to_numeric(place_rate, errors="coerce")
+
+                if pd.notna(place_rate):
+                    # パーセンテージから割合に変換（100で割る）
+                    return round(place_rate / 100, 3)
+                else:
+                    # データがない場合は0.0f
+                    return 0.0
+
+        # 選手情報がない場合のみNaN
+        return np.nan
+
+    # 各選手のコース別複勝率を計算
+    df["コース別複勝率"] = df.apply(calculate_course_place_rate, axis=1)
+
+    # 平均値との差分を計算する関数を定義 (TODO: 共通化可能)
+    def calc_rate_zscore(rates):
+        rates_numeric = pd.to_numeric(rates, errors="coerce")
+        # NaNを除いて平均を計算
+        valid_rates = rates_numeric.dropna()
+        if len(valid_rates) > 0:
+            avg_rate = valid_rates.mean()
+            return np.round(rates_numeric - avg_rate, decimals=3)
+        else:
+            return rates_numeric  # すべてNaNの場合はそのまま返す
+
+    # レース内でのコース別複勝率差を計算
+    df[col_name] = df.groupby("レースID")["コース別複勝率"].transform(calc_rate_zscore)
     # 全データで並びが崩れないようにソート(レースIDと枠番)
     df.sort_values(by=sort_col_name, inplace=True)
 
@@ -253,7 +346,7 @@ def calculate_course_win_rate_diff(programs_df, racers_df):
 
 
 # レース内コース別平均スタートタイミング差を計算する関数
-def calculate_course_start_timing_diff(programs_df, racers_df):
+def calculate_course_start_timing_zscore(programs_df, racers_df):
     """
     各レース内でのコース別平均スタートタイミングの平均からの差分を計算します。
 
@@ -302,7 +395,7 @@ def calculate_course_start_timing_diff(programs_df, racers_df):
     )
 
     # 平均値との差分を計算する関数を定義 (TODO: 共通化可能)
-    def calc_timing_diff(timings):
+    def calc_timing_zscore(timings):
         timings_numeric = pd.to_numeric(timings, errors="coerce")
         # NaNを除いて平均を計算
         valid_timings = timings_numeric.dropna()
@@ -314,7 +407,7 @@ def calculate_course_start_timing_diff(programs_df, racers_df):
 
     # レース内でのコース別平均スタートタイミング差を計算
     df[col_name] = df.groupby("レースID")["コース別平均スタートタイミング"].transform(
-        calc_timing_diff
+        calc_timing_zscore
     )
     # 全データで並びが崩れないようにソート(レースIDと枠番)
     df.sort_values(by=sort_col_name, inplace=True)
@@ -322,25 +415,25 @@ def calculate_course_start_timing_diff(programs_df, racers_df):
     return df[sort_col_name + [col_name]]
 
 
-# 1位フラグを計算する関数
+# 1着フラグを計算する関数
 def calculate_first_place(programs_df, results_df):
     """
-    results.csvの着順データから1位フラグを作成します。
+    results.csvの着順データから1着フラグを作成します。
 
     Args:
         programs_df (pd.DataFrame): programs.csvから読み込んだDataFrame
         results_df (pd.DataFrame): results.csvから読み込んだDataFrame
 
     Returns:
-        pd.DataFrame: 「1位フラグ」列と、レースID、枠番を含むDataFrame
+        pd.DataFrame: 「1着フラグ」列と、レースID、枠番を含むDataFrame
     """
     if "着順" not in results_df.columns:
         print(
-            "警告: results.csvに「着順」列が存在しません。1位フラグは作成されません。"
+            "警告: results.csvに「着順」列が存在しません。1着フラグは作成されません。"
         )
         return None
 
-    col_name = "1位フラグ"  # 特徴量名
+    col_name = "1着フラグ"  # 特徴量名
     sort_col_name = ["レースID", "枠番"]  # ソートに使用する列名
 
     # programs_dfからベースとなるDataFrameを作成
@@ -357,7 +450,7 @@ def calculate_first_place(programs_df, results_df):
             make_race_id, axis=1
         )
 
-    # results_dfから1位フラグを作成（着順が1の場合は1、それ以外は0）
+    # results_dfから1着フラグを作成（着順が1の場合は1、それ以外は0）
     results_with_race_id = results_with_race_id.copy()  # コピーを明示的に作成
     results_with_race_id[col_name] = (
         results_with_race_id["着順"].astype(str) == "1"
@@ -383,6 +476,86 @@ def calculate_first_place(programs_df, results_df):
     merge_df.sort_values(by=sort_col_name, inplace=True)
 
     return merge_df[sort_col_name + [col_name]]
+
+
+# # 級を計算する関数
+# def calculate_rank(programs_df):
+#     """
+#     選手の級を数値化します（B2=1, B1=2, A2=3, A1=4）。
+
+#     Args:
+#         programs_df (pd.DataFrame): programs.csvから読み込んだDataFrame
+
+#     Returns:
+#         pd.DataFrame: 「級」列と、レースID、枠番を含むDataFrame
+#     """
+#     col_name = "級"  # 特徴量名
+#     sort_col_name = ["レースID", "枠番"]  # ソートに使用する列名
+#     df = programs_df.copy()
+
+#     # 「レースID」が存在しない場合は作成する
+#     if "レースID" not in df.columns:
+#         df["レースID"] = df.apply(make_race_id, axis=1)
+
+#     # 級を数値化する関数
+#     def convert_rank_to_numeric(rank):
+#         rank_mapping = {"B2": 0, "B1": 1, "A2": 2, "A1": 3}
+
+#         # 文字列として扱い、マッピングテーブルから取得
+#         rank_str = str(rank).strip()
+#         return rank_mapping.get(rank_str, 0)  # 不明な場合は0
+
+#     # 級を数値化
+#     df[col_name] = df["級別"].apply(convert_rank_to_numeric)
+
+#     # 全データで並びが崩れないようにソート(レースIDと枠番)
+#     df.sort_values(by=sort_col_name, inplace=True)
+
+#     return df[sort_col_name + [col_name]]
+
+
+# レース内級差を計算する関数
+def calculate_rank_zscore(programs_df):
+    """
+    各レース内での級の平均からの差分を計算します。
+    級をB2=0, B1=1, A2=2, A1=3で数値化し、レース内平均との差分を算出します。
+
+    Args:
+        programs_df (pd.DataFrame): programs.csvから読み込んだDataFrame
+
+    Returns:
+        pd.DataFrame: 「レース内級差」列と、レースID、枠番を含むDataFrame
+    """
+    col_name = "レース内級差"  # 特徴量名
+    sort_col_name = ["レースID", "枠番"]  # ソートに使用する列名
+    df = programs_df.copy()
+
+    # 「レースID」が存在しない場合は作成する
+    if "レースID" not in df.columns:
+        df["レースID"] = df.apply(make_race_id, axis=1)
+
+    # 級を数値化する関数
+    def convert_rank_to_numeric(rank):
+        rank_mapping = {"B2": 1, "B1": 2, "A2": 4, "A1": 8}
+        rank_str = str(rank).strip()
+        return rank_mapping.get(rank_str, 0)  # 不明な場合は0
+
+    # 級を数値化
+    df["級数値"] = df["級別"].apply(convert_rank_to_numeric)
+
+    # 平均値との差分を計算する関数を定義
+    def calc_rank_zscore(ranks):
+        ranks_numeric = pd.to_numeric(ranks, errors="coerce")
+        avg_rank = ranks_numeric.mean()
+        return np.round(ranks_numeric - avg_rank, decimals=3)
+
+    # レース内での級差を計算
+    df[col_name] = df.groupby("レースID")["級数値"].transform(calc_rank_zscore)
+
+    # 全データで並びが崩れないようにソート(レースIDと枠番)
+    df.sort_values(by=sort_col_name, inplace=True)
+
+    return df[sort_col_name + [col_name]]
 
 
 def main():
