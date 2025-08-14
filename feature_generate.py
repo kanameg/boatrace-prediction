@@ -564,7 +564,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用例:
-  python feature_generate.py 2025-01-01 2025-07-18
+  python feature_generate.py 2025-01-01 2025-07-18 t    # 学習用データ（features/trainに保存）
+  python feature_generate.py 2025-01-01 2025-07-18 p    # 予測用データ（features/predに保存）
         """,
     )
 
@@ -582,6 +583,12 @@ def main():
         help="終了日 (YYYY-MM-DD形式)",
     )
 
+    parser.add_argument(
+        "mode",
+        choices=["t", "p"],
+        help="出力モード: t=学習用(features/train), p=予測用(features/pred)",
+    )
+
     args = parser.parse_args()
 
     # 日付の妥当性チェック
@@ -592,9 +599,23 @@ def main():
         print("エラー: 開始日が終了日より後になっています")
         exit(1)
 
+    # 出力ディレクトリの決定
+    if args.mode == "t":
+        output_dir = "features/train"
+        mode_name = "学習用"
+    else:  # args.mode == "p"
+        output_dir = "features/pred"
+        mode_name = "予測用"
+
+    # 出力ディレクトリを作成（存在しない場合）
+    import os
+
+    os.makedirs(output_dir, exist_ok=True)
+
     print("=== 特徴量生成スクリプト ===")
     print(f"開始日: {args.start_date}")
     print(f"終了日: {args.end_date}")
+    print(f"モード: {mode_name} ({output_dir})")
     print()
 
     # 特徴量作成実行
@@ -605,11 +626,12 @@ def main():
 
     # 各特徴量をCSVファイルとして保存
     for feature_name, df in features:
-        output_path = f"features/{feature_name}.csv"
+        output_path = os.path.join(output_dir, f"{feature_name}.csv")
         print(f"Saving {feature_name} to {output_path}")
         df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
-    print("\nすべての特徴量の保存が完了しました。")
+    print(f"\nすべての特徴量の{mode_name}データの保存が完了しました。")
+    print(f"保存先: {output_dir}/")
 
 
 if __name__ == "__main__":
