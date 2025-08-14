@@ -6,3 +6,4 @@ __pycache__/
 db/boat_race.db
 model/*
 !model/.gitkeep
+data/train_data.csv
