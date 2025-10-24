@@ -91,6 +91,7 @@ DOWNLOAD_URL="https://www1.mbrace.or.jp/od2/${URL_PATH}/${YEAR_FULL}${MONTH_PADD
 ARCHIVE_PATH="${ARCHIVE_FILENAME}"  # カレントディレクトリに一時保存
 RESULT_PATH="${OUTPUT_DIR}/${UTF8_FILENAME}"
 
+echo "----------------------------- START -----------------------------"
 echo "処理開始: ${DATE_ARG}の${TYPE_NAME}データを処理します"
 echo "ダウンロードURL: ${DOWNLOAD_URL}"
 
@@ -147,3 +148,4 @@ fi
 
 echo "処理完了: ${DATE_ARG}の${TYPE_NAME}データ処理が正常に完了しました"
 echo "出力ファイル: $RESULT_PATH"
+echo "------------------------------ END ------------------------------"
