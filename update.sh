@@ -49,7 +49,7 @@ LATEST_PROGRAM_DATE_STR=${LATEST_PROGRAM_FILENAME:1:6}  # b250723_u8.txt から 
 LATEST_PROGRAM_DATE="20${LATEST_PROGRAM_DATE_STR:0:2}-${LATEST_PROGRAM_DATE_STR:2:2}-${LATEST_PROGRAM_DATE_STR:4:2}"
 
 # データの最新日を取得（競走結果ファイルから判断）
-LATEST_RESULT_FILE=$(ls data/raw/results/r*.txt 2>/dev/null | sort | tail -1)
+LATEST_RESULT_FILE=$(ls data/raw/results/k*.txt 2>/dev/null | sort | tail -1)
 if [ -z "$LATEST_RESULT_FILE" ]; then
     echo "警告: 競走結果データファイルが見つかりません（初回実行時は正常）"
     LATEST_RESULT_DATE="$TARGET_DATE"
@@ -67,10 +67,10 @@ echo "競走結果最新日: $LATEST_RESULT_DATE"
 TARGET_EPOCH=$(date -d "$TARGET_DATE" +%s)
 LATEST_PROGRAM_EPOCH=$(date -d "$LATEST_PROGRAM_DATE" +%s)
 
-if [ "$TARGET_EPOCH" -gt "$LATEST_PROGRAM_EPOCH" ]; then
-    echo "エラー: 指定日($TARGET_DATE)が番組表の最新日($LATEST_PROGRAM_DATE)より後です"
-    exit 1
-fi
+# if [ "$TARGET_EPOCH" -gt "$LATEST_PROGRAM_EPOCH" ]; then
+#     echo "エラー: 指定日($TARGET_DATE)が番組表の最新日($LATEST_PROGRAM_DATE)より後です"
+#     exit 1
+# fi
 
 # 対象日のepoch秒を取得
 TARGET_EPOCH=$(date -d "$TARGET_DATE" +%s)
@@ -97,13 +97,43 @@ echo "========================================="
 echo ""
 echo "----------------------------------------------------"
 echo "1. 本日までの競走結果データを取得中..."
-./download_race.sh r "$TARGET_DATE"
+
+# 競走結果最新日の翌日から指定日までをダウンロードする
+# LATEST_RESULT_DATE は上で算出済み（競走結果ファイルがなければ TARGET_DATE が設定されている）
+START_RESULT_DATE=$(date -d "$LATEST_RESULT_DATE + 1 day" +%Y-%m-%d)
+
+if [ "$(date -d "$START_RESULT_DATE" +%s)" -le "$(date -d "$TARGET_DATE" +%s)" ]; then
+    CUR_DATE="$START_RESULT_DATE"
+    while [ "$(date -d "$CUR_DATE" +%s)" -le "$(date -d "$TARGET_DATE" +%s)" ]; do
+        echo "Downloading race results for $CUR_DATE"
+        ./download_race.sh r "$CUR_DATE"
+        # 次の日へ
+        CUR_DATE=$(date -d "$CUR_DATE + 1 day" +%Y-%m-%d)
+    done
+else
+    echo "競走結果の新規ダウンロードは不要です（開始日: $START_RESULT_DATE, 指定日: $TARGET_DATE）"
+fi
 
 # 2. 翌日の番組表データを取得
 echo ""
 echo "----------------------------------------------------"
-echo "2. 翌日の番組表データを取得中..."
-./download_race.sh p "$NEXT_DATE"
+echo "2. 番組表データを取得中..."
+
+# 番組表最新日の翌日から指定日の翌日(NEXT_DATE)までをダウンロードする
+# LATEST_PROGRAM_DATE は上で算出済み
+START_PROGRAM_DATE=$(date -d "$LATEST_PROGRAM_DATE + 1 day" +%Y-%m-%d)
+
+if [ "$(date -d "$START_PROGRAM_DATE" +%s)" -le "$(date -d "$NEXT_DATE" +%s)" ]; then
+    CUR_DATE="$START_PROGRAM_DATE"
+    while [ "$(date -d "$CUR_DATE" +%s)" -le "$(date -d "$NEXT_DATE" +%s)" ]; do
+        echo "Downloading program (番組表) for $CUR_DATE"
+        ./download_race.sh p "$CUR_DATE"
+        # 次の日へ
+        CUR_DATE=$(date -d "$CUR_DATE + 1 day" +%Y-%m-%d)
+    done
+else
+    echo "番組表の新規ダウンロードは不要です（開始日: $START_PROGRAM_DATE, 取得対象終了: $NEXT_DATE）"
+fi
 
 ## 数秒待ち
 sleep 2  # ダウンロード完了を待つためのスリープ
