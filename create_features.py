@@ -205,12 +205,52 @@ def make_feature_race_lane_win_rate_diff(programs_df, racers_df):
     return programs_df.groupby("レースID")["コース別複勝率"].transform(calc_rate_diff)
 
 
-def make_feature_first_place_flag(merged_df):
+def make_feature_1_place_flag(merged_df):
     """
     1着フラグ特徴量を作成
     """
     merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
     return (merged_df["着順"] == 1).astype(int)
+
+
+def make_feature_2_place_flag(merged_df):
+    """
+    2着フラグ特徴量を作成
+    """
+    merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
+    return (merged_df["着順"] == 2).astype(int)
+
+
+def make_feature_3_place_flag(merged_df):
+    """
+    3着フラグ特徴量を作成
+    """
+    merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
+    return (merged_df["着順"] == 3).astype(int)
+
+
+def make_feature_4_place_flag(merged_df):
+    """
+    4着フラグ特徴量を作成
+    """
+    merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
+    return (merged_df["着順"] == 4).astype(int)
+
+
+def make_feature_5_place_flag(merged_df):
+    """
+    5着フラグ特徴量を作成
+    """
+    merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
+    return (merged_df["着順"] == 5).astype(int)
+
+
+def make_feature_6_place_flag(merged_df):
+    """
+    6着フラグ特徴量を作成
+    """
+    merged_df["着順"] = pd.to_numeric(merged_df["着順"], errors="coerce")
+    return (merged_df["着順"] == 6).astype(int)
 
 
 def load_and_preprocess_programs(file_path, start_date=None, end_date=None):
@@ -421,6 +461,11 @@ def create_features(mode="train", start_date=None, end_date=None, output_path=No
             "レース内コース別1着率差",
             "レース内コース別複勝率差",
             "1着フラグ",
+            "2着フラグ",
+            "3着フラグ",
+            "4着フラグ",
+            "5着フラグ",
+            "6着フラグ",
         ]
 
         if mode == "train":
@@ -431,7 +476,12 @@ def create_features(mode="train", start_date=None, end_date=None, output_path=No
             # データマージ
             merged_df = merge_programs_and_results(programs_df, results_df)
             # 1着フラグ特徴量
-            merged_df["1着フラグ"] = make_feature_first_place_flag(merged_df)
+            merged_df["1着フラグ"] = make_feature_1_place_flag(merged_df)
+            merged_df["2着フラグ"] = make_feature_2_place_flag(merged_df)
+            merged_df["3着フラグ"] = make_feature_3_place_flag(merged_df)
+            merged_df["4着フラグ"] = make_feature_4_place_flag(merged_df)
+            merged_df["5着フラグ"] = make_feature_5_place_flag(merged_df)
+            merged_df["6着フラグ"] = make_feature_6_place_flag(merged_df)
         elif mode == "pred":
             # 予測モード：番組データのみで特徴量を作成
             merged_df = programs_df.copy()
