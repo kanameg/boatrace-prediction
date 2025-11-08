@@ -7,3 +7,4 @@ db/boat_race.db
 model/*
 !model/.gitkeep
 data/train_data.csv
+data/racers_stats_lane.csv
