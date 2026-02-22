@@ -134,6 +134,8 @@ def add_course_stats(df: pd.DataFrame) -> pd.DataFrame:
         if st_col in df.columns:
             df.loc[mask, "コース別ST"] = df.loc[mask, st_col]
 
+    # コース別複勝率差 = コース別複勝率 - レース内平均
+    df = add_race_diff(df, "コース別複勝率", "コース別複勝率差")
     # コース別ST差 = コース別ST - レース内平均コース別ST
     df = add_race_diff(df, "コース別ST", "コース別ST差")
 
@@ -141,7 +143,7 @@ def add_course_stats(df: pd.DataFrame) -> pd.DataFrame:
     drop_cols = (
         [f"{n}コース複勝率" for n in range(1, 7)]
         + [f"{n}コース平均スタートタイミング" for n in range(1, 7)]
-        + ["コース別ST"]
+        + ["コース別ST", "コース別複勝率"]
     )
     df = df.drop(columns=[c for c in drop_cols if c in df.columns])
 
@@ -189,7 +191,7 @@ def build_train(start_date: str, end_date: str) -> None:
         "モーター2連率", "ボート2連率", "級別",
     ]
     result_cols = [
-        "レースID", "選手登番", "艇番", "着順",
+        "レースID", "選手登番", "艇番", "着順", "レース場番号",
     ]
 
     df = results[result_cols].merge(
@@ -223,14 +225,18 @@ def build_train(start_date: str, end_date: str) -> None:
 
     # --- 出力カラム整理 ---
     out_cols = [
-        "レースID", "選手登番", "艇番",
+        "レースID", "選手登番",
+        "艇番", "レース場番号", "級別コード",
         "全国勝率差", "全国2連率差", "当地勝率差", "当地2連率差",
         "モーター2連率差", "ボート2連率差", "級別差",
-        "能力指数差", "平均ST差",
-        "コース別複勝率", "コース別ST差",
+        "能力指数差", "平均ST差", "コース別複勝率差", "コース別ST差",
         "1着フラグ",
     ]
     df = df[out_cols]
+
+    # --- カテゴリ dtype 変換 ---
+    for col in ["艇番", "レース場番号", "級別コード"]:
+        df[col] = df[col].astype("category")
 
     # --- 保存 ---
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -281,13 +287,17 @@ def build_pred(pred_date: str) -> None:
 
     # --- 出力カラム整理 ---
     out_cols = [
-        "レースID", "選手登番", "艇番",
+        "レースID", "選手登番",
+        "艇番", "レース場番号", "級別コード",
         "全国勝率差", "全国2連率差", "当地勝率差", "当地2連率差",
         "モーター2連率差", "ボート2連率差", "級別差",
-        "能力指数差", "平均ST差",
-        "コース別複勝率", "コース別ST差",
+        "能力指数差", "平均ST差", "コース別複勝率差", "コース別ST差",
     ]
     df = df[out_cols]
+
+    # --- カテゴリ dtype 変換 ---
+    for col in ["艇番", "レース場番号", "級別コード"]:
+        df[col] = df[col].astype("category")
 
     # --- 保存 ---
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
