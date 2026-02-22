@@ -46,5 +46,5 @@ WORKDIR /app
 COPY requirements.txt /app
 RUN pip install -r requirements.txt
 
-# Google Gemini CLIのインストール
-RUN npm install -g @google/gemini-cli
+# Claude Codeのインストール
+RUN npm install -g @anthropic-ai/claude-code
